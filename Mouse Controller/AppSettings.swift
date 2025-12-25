@@ -19,8 +19,10 @@ final class AppSettings: ObservableObject {
     @Published var pointerAcceleration: Double = 1.0 { didSet { save() } }
     @Published var scrollSpeed: Double = 24 { didSet { save() } }
     @Published var invertScrollY: Bool = false { didSet { save() } }
+    @Published var invertScrollX: Bool = false { didSet { save() } }
     @Published var deadzone: Double = 0.15 { didSet { save() } }
     @Published var invertY: Bool = false { didSet { save() } }
+    @Published var invertX: Bool = false { didSet { save() } }
     @Published var horizontalScrollEnabled: Bool = true { didSet { save() } }
 
     private let d = UserDefaults.standard
@@ -33,8 +35,10 @@ final class AppSettings: ObservableObject {
         pointerAcceleration = obj["pointerAcceleration"] as? Double ?? pointerAcceleration
         scrollSpeed = obj["scrollSpeed"] as? Double ?? scrollSpeed
         invertScrollY = obj["invertScrollY"] as? Bool ?? invertScrollY
+        invertScrollX = obj["invertScrollX"] as? Bool ?? invertScrollX
         deadzone = obj["deadzone"] as? Double ?? deadzone
         invertY = obj["invertY"] as? Bool ?? invertY
+        invertX = obj["invertX"] as? Bool ?? invertX
         horizontalScrollEnabled = obj["horizontalScrollEnabled"] as? Bool ?? horizontalScrollEnabled
     }
 
@@ -45,10 +49,11 @@ final class AppSettings: ObservableObject {
             "pointerAcceleration": pointerAcceleration,
             "scrollSpeed": scrollSpeed,
             "invertScrollY": invertScrollY,
+            "invertScrollX": invertScrollX,
             "deadzone": deadzone,
             "invertY": invertY,
+            "invertX": invertX,
             "horizontalScrollEnabled": horizontalScrollEnabled
         ], forKey: k)
     }
 }
-
