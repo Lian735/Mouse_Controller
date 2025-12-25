@@ -49,6 +49,12 @@ struct SettingsView: View {
 //                .tag(SettingsTab.advanced)
         }
         .tabViewStyle(.automatic)
+        .onChange(of: settings.enabled) { _, newValue in
+            mouseService.setEnabled(newValue)
+        }
+        .onChange(of: settings.autoDisableInGameMode) { _, _ in
+            mouseService.updateAutoDisablePreference()
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ControllerButtonDetected"))) { note in
             guard isCapturingButton,
                   let name = note.userInfo?["name"] as? String,
@@ -89,7 +95,7 @@ struct SettingsView: View {
                     }
                     Divider()
                     LabeledContent("Controller") {
-                        Text(mouseService.controllerName.capitalized)
+                        Text("\(mouseService.controllerName.capitalized) · \(mouseService.batteryDescription)")
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -127,6 +133,20 @@ struct SettingsView: View {
                 SettingsCard(title: "Joysticks") {
                     Toggle("Use right stick for pointer", isOn: $settings.swapSticks)
                     Text("When enabled, the right stick controls the pointer and the left stick scrolls.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                SettingsCard(title: "Behavior") {
+                    Toggle("Disable in Game Mode", isOn: $settings.autoDisableInGameMode)
+                    Text("Automatically disables Mouse Controller while Game Mode is detected.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Toggle("Launch at login", isOn: $settings.launchAtLogin)
+                    Text("Start Mouse Controller automatically when you sign in to macOS.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text("Optimized for using macOS, not for games.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -168,7 +188,10 @@ struct SettingsView: View {
                                 .padding(16)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                                .onTapGesture { isCapturingButton = true }
+                                .onTapGesture {
+                                    mouseService.vibrateDoublePulse()
+                                    isCapturingButton = true
+                                }
                                 .glassEffect(
                                     .regular,
                                     in: RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -181,8 +204,7 @@ struct SettingsView: View {
                             } else {
                             
                                 ForEach(buttons, id: \.self) { btn in
-                                    ShortcutRow(button: btn)
-                                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                    ShortcutRow(button: btn, isActive: mouseService.activeButtons.contains(btn))
                                 }
                                 
                                 Button(role: .destructive) {
@@ -328,6 +350,7 @@ private struct SettingSlider: View {
 struct ShortcutRow: View {
     @StateObject private var store = ShortcutStore.shared
     let button: ControllerButton
+    let isActive: Bool
     @State private var tempShortcut: Shortcut? = nil
 
     var body: some View {
@@ -362,6 +385,9 @@ struct ShortcutRow: View {
             }
         }
         .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(activeBackground)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private var currentActionDescription: String {
@@ -381,5 +407,14 @@ struct ShortcutRow: View {
         } else {
             store.removeButton(button)
         }
+    }
+
+    private var activeBackground: some View {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(isActive ? Color.accentColor.opacity(0.18) : Color.clear)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(isActive ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1)
+            )
     }
 }
