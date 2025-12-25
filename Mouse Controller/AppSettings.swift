@@ -25,6 +25,13 @@ final class AppSettings: ObservableObject {
     @Published var invertX: Bool = false { didSet { save() } }
     @Published var horizontalScrollEnabled: Bool = true { didSet { save() } }
     @Published var swapSticks: Bool = false { didSet { save() } }
+    @Published var autoDisableInGameMode: Bool = true { didSet { save() } }
+    @Published var launchAtLogin: Bool = false {
+        didSet {
+            guard oldValue != launchAtLogin else { return }
+            LaunchAtLoginManager.shared.setEnabled(launchAtLogin)
+        }
+    }
     @Published var experimentalTeleportEnabled: Bool = false { didSet { save() } }
     @Published var experimentalTeleportRadius: Double = 260 { didSet { save() } }
 
@@ -44,8 +51,10 @@ final class AppSettings: ObservableObject {
         invertX = obj["invertX"] as? Bool ?? invertX
         horizontalScrollEnabled = obj["horizontalScrollEnabled"] as? Bool ?? horizontalScrollEnabled
         swapSticks = obj["swapSticks"] as? Bool ?? swapSticks
+        autoDisableInGameMode = obj["autoDisableInGameMode"] as? Bool ?? autoDisableInGameMode
         experimentalTeleportEnabled = obj["experimentalTeleportEnabled"] as? Bool ?? experimentalTeleportEnabled
         experimentalTeleportRadius = obj["experimentalTeleportRadius"] as? Double ?? experimentalTeleportRadius
+        launchAtLogin = LaunchAtLoginManager.shared.isEnabled
     }
 
     private func save() {
@@ -61,6 +70,7 @@ final class AppSettings: ObservableObject {
             "invertX": invertX,
             "horizontalScrollEnabled": horizontalScrollEnabled,
             "swapSticks": swapSticks,
+            "autoDisableInGameMode": autoDisableInGameMode,
             "experimentalTeleportEnabled": experimentalTeleportEnabled,
             "experimentalTeleportRadius": experimentalTeleportRadius
         ], forKey: k)
