@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "C2845B5E-2C43-49F7-81DF-B12DFCF0E69F"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "ABA88434-D547-419F-BB09-01CEFD2E97E9"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Mouse Controller/ShortcutRecorderView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "34"
+            endingLineNumber = "34"
+            landmarkName = "startCapture()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "ABA88434-D547-419F-BB09-01CEFD2E97E9 - de29e8ef28bc7da6"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 () -&gt; SwiftUI.TupleView&lt;(Swift.Optional&lt;&lt;&lt;opaque return type of SwiftUI.View.background&lt;&#x3c4;_0_0 where &#x3c4;_1_0: SwiftUI.View&gt;(_: &#x3c4;_1_0, alignment: SwiftUI.Alignment) -&gt; some&gt;&gt;.0&gt;, &lt;&lt;opaque return type of SwiftUI.View.keyboardShortcut(SwiftUI.KeyboardShortcut) -&gt; some&gt;&gt;.0)&gt; in Mouse_Controller.ShortcutRecorderView.body.getter : some"
+                  moduleName = "Mouse Controller.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/lian/Coding/Mouse%20Controller/Mouse%20Controller/ShortcutRecorderView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "34"
+                  endingLineNumber = "34">
+               </Location>
+               <Location
+                  uuid = "ABA88434-D547-419F-BB09-01CEFD2E97E9 - 66bfb238e801938f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Mouse_Controller.ShortcutEventTapRecorder.Capture) -&gt; () in Mouse_Controller.ShortcutRecorderView.startCapture() -&gt; ()"
+                  moduleName = "Mouse Controller.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/lian/Coding/Mouse%20Controller/Mouse%20Controller/ShortcutRecorderView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "35"
+                  endingLineNumber = "35">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

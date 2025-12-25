@@ -23,14 +23,15 @@ final class ShortcutEventTapRecorder {
         guard eventTap == nil else { return }
         resetState()
 
-        let mask: CGEventMask =
-            (1 << CGEventType.keyDown.rawValue) |
-            (1 << CGEventType.keyUp.rawValue) |
-            (1 << CGEventType.flagsChanged.rawValue) |
-            (1 << CGEventType.systemDefined.rawValue) |
-            (1 << CGEventType.leftMouseDown.rawValue) |
-            (1 << CGEventType.rightMouseDown.rawValue) |
-            (1 << CGEventType.otherMouseDown.rawValue)
+        let systemDefinedType = CGEventType(rawValue: 14)!
+        var mask: CGEventMask = 0
+        mask |= (1 << CGEventType.keyDown.rawValue)
+        mask |= (1 << CGEventType.keyUp.rawValue)
+        mask |= (1 << CGEventType.flagsChanged.rawValue)
+        mask |= (1 << systemDefinedType.rawValue)
+        mask |= (1 << CGEventType.leftMouseDown.rawValue)
+        mask |= (1 << CGEventType.rightMouseDown.rawValue)
+        mask |= (1 << CGEventType.otherMouseDown.rawValue)
 
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
             guard let refcon else { return Unmanaged.passUnretained(event) }
@@ -83,6 +84,8 @@ final class ShortcutEventTapRecorder {
     }
 
     private func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        let systemDefinedType = CGEventType(rawValue: 14)!
+
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
@@ -113,7 +116,7 @@ final class ShortcutEventTapRecorder {
         case .flagsChanged:
             handleFlagsChanged(event)
             return nil
-        case .systemDefined:
+        case _ where type.rawValue == systemDefinedType.rawValue:
             handleSystemDefined(event)
             return nil
         default:

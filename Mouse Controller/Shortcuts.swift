@@ -2,7 +2,33 @@ import Foundation
 import ApplicationServices
 import Combine
 import AppKit
-import IOKit.hidsystem
+
+// Define NX_KEYTYPE_* constants if they are not available in this SDK. We guard by defining our own namespace.
+enum NXKeyType {
+    // Values taken from common macOS headers; used when SDK doesn't provide aliases
+    static let missionControl: Int32 = 0xA0
+    static let launchpad: Int32 = 0xA1
+    static let brightnessUp: Int32 = 0x91
+    static let brightnessDown: Int32 = 0x90
+    static let soundUp: Int32 = 0x00
+    static let soundDown: Int32 = 0x01
+    static let mute: Int32 = 0x07
+    static let play: Int32 = 0x10
+    static let fast: Int32 = 0x0F
+    static let rewind: Int32 = 0x0E
+}
+
+// Provide public constants used by the rest of this file, mapping to NXKeyType
+let NX_KEYTYPE_MISSION_CONTROL: Int32 = NXKeyType.missionControl
+let NX_KEYTYPE_LAUNCHPAD: Int32 = NXKeyType.launchpad
+let NX_KEYTYPE_BRIGHTNESS_UP: Int32 = NXKeyType.brightnessUp
+let NX_KEYTYPE_BRIGHTNESS_DOWN: Int32 = NXKeyType.brightnessDown
+let NX_KEYTYPE_SOUND_UP: Int32 = NXKeyType.soundUp
+let NX_KEYTYPE_SOUND_DOWN: Int32 = NXKeyType.soundDown
+let NX_KEYTYPE_MUTE: Int32 = NXKeyType.mute
+let NX_KEYTYPE_PLAY: Int32 = NXKeyType.play
+let NX_KEYTYPE_FAST: Int32 = NXKeyType.fast
+let NX_KEYTYPE_REWIND: Int32 = NXKeyType.rewind
 
 enum MouseButton: Int, Codable, CaseIterable, CustomStringConvertible {
     case left = 0
@@ -153,6 +179,11 @@ extension ControllerButton {
         return name
     }
 }
+
+#if canImport(AppKit)
+// Fallback for NX_SUBTYPE_AUX_CONTROL_BUTTONS if not present
+private let NX_SUBTYPE_AUX_CONTROL_BUTTONS: Int16 = 8
+#endif
 
 @MainActor
 final class ShortcutStore: ObservableObject {
@@ -387,11 +418,11 @@ enum ShortcutPerformer {
         let nsEvent = NSEvent.otherEvent(
             with: .systemDefined,
             location: .zero,
-            modifierFlags: modifiers,
+            modifierFlags: NSEvent.ModifierFlags(rawValue: UInt(modifiers.rawValue)),
             timestamp: ProcessInfo.processInfo.systemUptime,
             windowNumber: 0,
             context: nil,
-            subtype: Int16(NX_SUBTYPE_AUX_CONTROL_BUTTONS),
+            subtype: NX_SUBTYPE_AUX_CONTROL_BUTTONS,
             data1: Int(data1),
             data2: -1
         )
@@ -482,3 +513,4 @@ enum ModifierKeyMapping {
         return allModifierCodes.first { $0.1 == keyCode }?.0
     }
 }
+
