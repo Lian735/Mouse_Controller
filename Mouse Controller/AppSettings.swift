@@ -8,6 +8,7 @@
 
 import Foundation
 import Combine
+import ServiceManagement
 
 @MainActor
 final class AppSettings: ObservableObject {
@@ -27,6 +28,8 @@ final class AppSettings: ObservableObject {
     @Published var swapSticks: Bool = false { didSet { save() } }
     @Published var experimentalTeleportEnabled: Bool = false { didSet { save() } }
     @Published var experimentalTeleportRadius: Double = 260 { didSet { save() } }
+    @Published var autoDisableInGameMode: Bool = true { didSet { save() } }
+    @Published var launchAtLogin: Bool = LoginItemManager.isEnabled() { didSet { save(); LoginItemManager.setEnabled(launchAtLogin) } }
 
     private let d = UserDefaults.standard
     private let k = "ControllerMouseSettings"
@@ -46,6 +49,12 @@ final class AppSettings: ObservableObject {
         swapSticks = obj["swapSticks"] as? Bool ?? swapSticks
         experimentalTeleportEnabled = obj["experimentalTeleportEnabled"] as? Bool ?? experimentalTeleportEnabled
         experimentalTeleportRadius = obj["experimentalTeleportRadius"] as? Double ?? experimentalTeleportRadius
+        autoDisableInGameMode = obj["autoDisableInGameMode"] as? Bool ?? autoDisableInGameMode
+        if let launchSetting = obj["launchAtLogin"] as? Bool {
+            launchAtLogin = launchSetting
+        } else {
+            launchAtLogin = LoginItemManager.isEnabled()
+        }
     }
 
     private func save() {
@@ -62,7 +71,9 @@ final class AppSettings: ObservableObject {
             "horizontalScrollEnabled": horizontalScrollEnabled,
             "swapSticks": swapSticks,
             "experimentalTeleportEnabled": experimentalTeleportEnabled,
-            "experimentalTeleportRadius": experimentalTeleportRadius
+            "experimentalTeleportRadius": experimentalTeleportRadius,
+            "autoDisableInGameMode": autoDisableInGameMode,
+            "launchAtLogin": launchAtLogin
         ], forKey: k)
     }
 }
