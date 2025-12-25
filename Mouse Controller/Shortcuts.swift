@@ -215,6 +215,7 @@ final class ShortcutStore: ObservableObject {
         guard let data = d.data(forKey: k) else { return false }
         if let decoded = try? JSONDecoder().decode([ControllerButton: Shortcut?].self, from: data) {
             bindings = decoded
+            normalizeJoystickBindings()
             return true
         }
         return false
@@ -242,6 +243,7 @@ final class ShortcutStore: ObservableObject {
     func set(_ shortcut: Shortcut?, for button: ControllerButton) {
         if let s = shortcut {
             bindings[button] = .some(s)
+            ensureStickBindingsIfNeeded(for: button)
         } else {
             bindings[button] = .some(nil)
         }
@@ -283,7 +285,25 @@ final class ShortcutStore: ObservableObject {
     }
 
     func removeButton(_ button: ControllerButton) {
-        bindings.removeValue(forKey: button)
+        if JoystickBinding.stick(for: button.name) != nil {
+            removeStickBindings(for: button)
+        } else {
+            bindings.removeValue(forKey: button)
+        }
+    }
+
+    private func ensureStickBindingsIfNeeded(for button: ControllerButton) {
+        guard let stick = JoystickBinding.stick(for: button.name) else { return }
+        ensureButtons(JoystickBinding.buttons(for: stick))
+    }
+
+    private func normalizeJoystickBindings() {
+        for stick in JoystickStick.allCases {
+            let hasAny = bindings.keys.contains { JoystickBinding.stick(for: $0.name) == stick }
+            if hasAny {
+                ensureButtons(JoystickBinding.buttons(for: stick))
+            }
+        }
     }
 }
 
@@ -513,4 +533,3 @@ enum ModifierKeyMapping {
         return allModifierCodes.first { $0.1 == keyCode }?.0
     }
 }
-
