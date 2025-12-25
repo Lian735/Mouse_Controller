@@ -8,10 +8,13 @@
 import SwiftUI
 
 @main
-struct Mouse_ControllerApp: App {
+struct Mouse_Controller: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        Settings {
+            SettingsView()
         }
+        .defaultSize(width: 520, height: 420)
     }
 }

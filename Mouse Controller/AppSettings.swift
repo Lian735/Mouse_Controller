@@ -1,0 +1,54 @@
+//
+//  AppSettings.swift
+//  Mouse Controller
+//
+//  Created by Lian on 25.12.25.
+//
+
+
+import Foundation
+import Combine
+
+@MainActor
+final class AppSettings: ObservableObject {
+    static let shared = AppSettings()
+    private init() { load() }
+
+    @Published var enabled: Bool = true { didSet { save() } }
+    @Published var cursorSpeed: Double = 18 { didSet { save() } }
+    @Published var pointerAcceleration: Double = 1.0 { didSet { save() } }
+    @Published var scrollSpeed: Double = 24 { didSet { save() } }
+    @Published var invertScrollY: Bool = false { didSet { save() } }
+    @Published var deadzone: Double = 0.15 { didSet { save() } }
+    @Published var invertY: Bool = false { didSet { save() } }
+    @Published var horizontalScrollEnabled: Bool = true { didSet { save() } }
+
+    private let d = UserDefaults.standard
+    private let k = "ControllerMouseSettings"
+
+    private func load() {
+        guard let obj = d.dictionary(forKey: k) else { return }
+        enabled = obj["enabled"] as? Bool ?? enabled
+        cursorSpeed = obj["cursorSpeed"] as? Double ?? cursorSpeed
+        pointerAcceleration = obj["pointerAcceleration"] as? Double ?? pointerAcceleration
+        scrollSpeed = obj["scrollSpeed"] as? Double ?? scrollSpeed
+        invertScrollY = obj["invertScrollY"] as? Bool ?? invertScrollY
+        deadzone = obj["deadzone"] as? Double ?? deadzone
+        invertY = obj["invertY"] as? Bool ?? invertY
+        horizontalScrollEnabled = obj["horizontalScrollEnabled"] as? Bool ?? horizontalScrollEnabled
+    }
+
+    private func save() {
+        d.set([
+            "enabled": enabled,
+            "cursorSpeed": cursorSpeed,
+            "pointerAcceleration": pointerAcceleration,
+            "scrollSpeed": scrollSpeed,
+            "invertScrollY": invertScrollY,
+            "deadzone": deadzone,
+            "invertY": invertY,
+            "horizontalScrollEnabled": horizontalScrollEnabled
+        ], forKey: k)
+    }
+}
+
