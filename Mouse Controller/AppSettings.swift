@@ -24,6 +24,7 @@ final class AppSettings: ObservableObject {
     @Published var invertY: Bool = false { didSet { save() } }
     @Published var invertX: Bool = false { didSet { save() } }
     @Published var horizontalScrollEnabled: Bool = true { didSet { save() } }
+    @Published var swapSticks: Bool = false { didSet { save() } }
     @Published var experimentalTeleportEnabled: Bool = false { didSet { save() } }
     @Published var experimentalTeleportRadius: Double = 260 { didSet { save() } }
 
@@ -42,6 +43,7 @@ final class AppSettings: ObservableObject {
         invertY = obj["invertY"] as? Bool ?? invertY
         invertX = obj["invertX"] as? Bool ?? invertX
         horizontalScrollEnabled = obj["horizontalScrollEnabled"] as? Bool ?? horizontalScrollEnabled
+        swapSticks = obj["swapSticks"] as? Bool ?? swapSticks
         experimentalTeleportEnabled = obj["experimentalTeleportEnabled"] as? Bool ?? experimentalTeleportEnabled
         experimentalTeleportRadius = obj["experimentalTeleportRadius"] as? Double ?? experimentalTeleportRadius
     }
@@ -58,6 +60,7 @@ final class AppSettings: ObservableObject {
             "invertY": invertY,
             "invertX": invertX,
             "horizontalScrollEnabled": horizontalScrollEnabled,
+            "swapSticks": swapSticks,
             "experimentalTeleportEnabled": experimentalTeleportEnabled,
             "experimentalTeleportRadius": experimentalTeleportRadius
         ], forKey: k)
