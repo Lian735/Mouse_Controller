@@ -15,59 +15,85 @@ struct SettingsView: View {
     @State private var isCapturingButton: Bool = false
 
     var body: some View {
-        Form {
-            Toggle("Enabled", isOn: $settings.enabled)
-
-            Slider(value: $settings.cursorSpeed, in: 2...40, step: 1) {
-                Text("Cursor speed")
-            }
-            Text("Cursor speed: \(Int(settings.cursorSpeed))")
-            
-            Slider(value: $settings.pointerAcceleration, in: 0.1...3.0, step: 0.1) {
-                Text("Pointer acceleration")
-            }
-            Text(String(format: "Pointer acceleration: %.1fx", settings.pointerAcceleration))
-
-            Slider(value: $settings.scrollSpeed, in: 2...60, step: 1) {
-                Text("Scroll speed")
-            }
-            Text("Scroll speed: \(Int(settings.scrollSpeed))")
-            Toggle("Horizontal scroll", isOn: $settings.horizontalScrollEnabled)
-            Toggle("Invert scroll Y", isOn: $settings.invertScrollY)
-
-            Slider(value: $settings.deadzone, in: 0.0...0.4, step: 0.01) {
-                Text("Deadzone")
-            }
-            Text(String(format: "Deadzone: %.2f", settings.deadzone))
-
-            Toggle("Invert Y", isOn: $settings.invertY)
-
-            Section("Shortcuts") {
-                if isCapturingButton {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text("Press a button on your controller to add it...")
-                        Spacer()
-                        Button("Cancel") { isCapturingButton = false }
-                    }
+        TabView {
+            Form {
+                Section {
+                    Toggle("Enabled", isOn: $settings.enabled)
                 }
-                let buttons = store.bindings.keys.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-                if buttons.isEmpty {
-                    Text("No controller buttons detected yet. Press any button on your controller to have it appear here.")
+
+                Section("Pointer") {
+                    Slider(value: $settings.cursorSpeed, in: 2...40, step: 1) {
+                        Text("Cursor speed")
+                    }
+                    Text("Cursor speed: \(Int(settings.cursorSpeed))")
                         .foregroundStyle(.secondary)
-                } else {
-                    ForEach(buttons, id: \.self) { btn in
-                        ShortcutRow(title: btn.name, button: btn)
+                }
+
+                Section("Scrolling") {
+                    Slider(value: $settings.scrollSpeed, in: 2...60, step: 1) {
+                        Text("Scroll speed")
+                    }
+                    Text("Scroll speed: \(Int(settings.scrollSpeed))")
+                        .foregroundStyle(.secondary)
+                    Toggle("Horizontal scroll", isOn: $settings.horizontalScrollEnabled)
+                }
+
+                Section("Shortcuts") {
+                    if isCapturingButton {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text("Press a button on your controller to add it...")
+                            Spacer()
+                            Button("Cancel") { isCapturingButton = false }
+                        }
+                    }
+                    let buttons = store.bindings.keys.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                    if buttons.isEmpty {
+                        Text("No controller buttons detected yet. Press any button on your controller to have it appear here.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(buttons, id: \.self) { btn in
+                            ShortcutRow(title: btn.name, button: btn)
+                        }
+                    }
+                    Button(role: .destructive) {
+                        store.reset()
+                    } label: {
+                        Text("Reset All Shortcuts")
                     }
                 }
-                Button(role: .destructive) {
-                    store.reset()
-                } label: {
-                    Text("Reset All Shortcuts")
+            }
+            .padding(16)
+            .tabItem {
+                Label("General", systemImage: "slider.horizontal.3")
+            }
+
+            Form {
+                Section("Mouse movement") {
+                    Toggle("Invert vertical", isOn: $settings.invertY)
+                    Toggle("Invert horizontal", isOn: $settings.invertX)
+                    Slider(value: $settings.pointerAcceleration, in: 0.1...3.0, step: 0.1) {
+                        Text("Pointer acceleration")
+                    }
+                    Text(String(format: "Pointer acceleration: %.1fx", settings.pointerAcceleration))
+                        .foregroundStyle(.secondary)
+                    Slider(value: $settings.deadzone, in: 0.0...0.4, step: 0.01) {
+                        Text("Deadzone")
+                    }
+                    Text(String(format: "Deadzone: %.2f", settings.deadzone))
+                        .foregroundStyle(.secondary)
                 }
+
+                Section("Scrolling") {
+                    Toggle("Invert vertical scroll", isOn: $settings.invertScrollY)
+                    Toggle("Invert horizontal scroll", isOn: $settings.invertScrollX)
+                }
+            }
+            .padding(16)
+            .tabItem {
+                Label("Advanced", systemImage: "gearshape")
             }
         }
-        .padding(16)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {

@@ -92,6 +92,7 @@ final class ControllerMouseService: ObservableObject {
         var dy = applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
 
         if s.invertY { dy = -dy }
+        if s.invertX { dx = -dx }
 
         if dx != 0 || dy != 0 {
             MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
@@ -101,7 +102,8 @@ final class ControllerMouseService: ObservableObject {
         let rawScrollX = applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
         var scrollY = rawScrollY
         if s.invertScrollY { scrollY = -scrollY }
-        let scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
+        var scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
+        if s.invertScrollX { scrollX = -scrollX }
         if scrollX != 0 || scrollY != 0 {
             MouseEvents.scroll(dx: Int32(scrollX), dy: Int32(-scrollY))
         }
