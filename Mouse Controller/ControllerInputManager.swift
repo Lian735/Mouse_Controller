@@ -32,8 +32,8 @@ final class ControllerInputManager {
         if let mg = controller.microGamepad {
             wireMicroGamepad(mg)
         }
-        if let g = controller.gamepad {
-            wireGamepad(g)
+        if let g = controller.extendedGamepad {
+            wireExtendedGamepad(g)
         }
     }
 
@@ -82,17 +82,6 @@ final class ControllerInputManager {
     private func wireMicroGamepad(_ gp: GCMicroGamepad) {
         attachDetection(to: gp.buttonA, name: "ButtonA")
         attachDetection(to: gp.buttonX, name: "ButtonX")
-        attachDetection(to: gp.dpad.up, name: "DPadUp")
-        attachDetection(to: gp.dpad.down, name: "DPadDown")
-        attachDetection(to: gp.dpad.left, name: "DPadLeft")
-        attachDetection(to: gp.dpad.right, name: "DPadRight")
-    }
-
-    private func wireGamepad(_ gp: GCGamepad) {
-        attachDetection(to: gp.buttonA, name: "ButtonA")
-        attachDetection(to: gp.buttonB, name: "ButtonB")
-        attachDetection(to: gp.buttonX, name: "ButtonX")
-        attachDetection(to: gp.buttonY, name: "ButtonY")
         attachDetection(to: gp.dpad.up, name: "DPadUp")
         attachDetection(to: gp.dpad.down, name: "DPadDown")
         attachDetection(to: gp.dpad.left, name: "DPadLeft")

@@ -42,11 +42,17 @@ final class ControllerMouseService: ObservableObject {
 
         NotificationCenter.default.addObserver(forName: .GCControllerDidConnect, object: nil, queue: .main) { [weak self] n in
             guard let c = n.object as? GCController else { return }
-            self?.attach(c)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.attach(c)
+            }
         }
         NotificationCenter.default.addObserver(forName: .GCControllerDidDisconnect, object: nil, queue: .main) { [weak self] n in
             guard let c = n.object as? GCController else { return }
-            if self?.controller === c { self?.detach() }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if self.controller === c { self.detach() }
+            }
         }
 
         GCController.startWirelessControllerDiscovery(completionHandler: nil)
@@ -54,7 +60,10 @@ final class ControllerMouseService: ObservableObject {
 
         timer?.invalidate()
         let t = Timer(timeInterval: 1.0/120.0, repeats: true) { [weak self] _ in
-            self?.tick()
+            guard let self else { return }
+            Task { @MainActor in
+                self.tick()
+            }
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
@@ -70,10 +79,6 @@ final class ControllerMouseService: ObservableObject {
 
         if let gp = c.extendedGamepad {
             wireExtendedGamepad(gp)
-        }
-
-        if let gp = c.gamepad {
-            wireGamepad(gp)
         }
 
         if let gp = c.microGamepad {
@@ -158,21 +163,6 @@ final class ControllerMouseService: ObservableObject {
 
         bindButton(gp.leftThumbstickButton, name: "L3")
         bindButton(gp.rightThumbstickButton, name: "R3")
-    }
-
-    private func wireGamepad(_ gp: GCGamepad) {
-        bindButton(gp.buttonA, name: "ButtonA")
-        bindButton(gp.buttonB, name: "ButtonB")
-        bindButton(gp.buttonX, name: "ButtonX")
-        bindButton(gp.buttonY, name: "ButtonY")
-
-        bindButton(gp.leftShoulder, name: "L1")
-        bindButton(gp.rightShoulder, name: "R1")
-
-        bindButton(gp.dpad.up, name: "DPadUp")
-        bindButton(gp.dpad.down, name: "DPadDown")
-        bindButton(gp.dpad.left, name: "DPadLeft")
-        bindButton(gp.dpad.right, name: "DPadRight")
     }
 
     private func wireMicroGamepad(_ gp: GCMicroGamepad) {
