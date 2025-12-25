@@ -73,16 +73,28 @@ final class ControllerMouseService: ObservableObject {
             self?.ry = y
         }
 
-        gp.buttonA.pressedChangedHandler = { _, _, pressed in
-            guard Accessibility.isTrusted else { return }
-            guard !ShortcutRecordingState.shared.isRecording else { return }
-            pressed ? MouseEvents.leftDown() : MouseEvents.leftUp()
-        }
-        gp.buttonB.pressedChangedHandler = { _, _, pressed in
-            guard Accessibility.isTrusted else { return }
-            guard !ShortcutRecordingState.shared.isRecording else { return }
-            pressed ? MouseEvents.rightDown() : MouseEvents.rightUp()
-        }
+        bindButton(gp.buttonA, name: "ButtonA")
+        bindButton(gp.buttonB, name: "ButtonB")
+        bindButton(gp.buttonX, name: "ButtonX")
+        bindButton(gp.buttonY, name: "ButtonY")
+
+        bindButton(gp.leftShoulder, name: "L1")
+        bindButton(gp.rightShoulder, name: "R1")
+
+        bindButton(gp.leftTrigger, name: "L2")
+        bindButton(gp.rightTrigger, name: "R2")
+
+        bindButton(gp.dpad.up, name: "DPadUp")
+        bindButton(gp.dpad.down, name: "DPadDown")
+        bindButton(gp.dpad.left, name: "DPadLeft")
+        bindButton(gp.dpad.right, name: "DPadRight")
+
+        bindButton(gp.buttonMenu, name: "Menu")
+        bindButton(gp.buttonOptions, name: "Options")
+        bindButton(gp.buttonHome, name: "Home")
+
+        bindButton(gp.leftThumbstickButton, name: "L3")
+        bindButton(gp.rightThumbstickButton, name: "R3")
     }
 
     private func detach() {
@@ -118,5 +130,38 @@ final class ControllerMouseService: ObservableObject {
 
     private func applyDeadzone(_ v: Float, dz: Float) -> Float {
         abs(v) < dz ? 0 : v
+    }
+
+    private func bindButton(_ input: GCControllerButtonInput?, name: String) {
+        guard let input else { return }
+        let existingHandler = input.pressedChangedHandler
+        input.pressedChangedHandler = { [weak self] button, value, pressed in
+            existingHandler?(button, value, pressed)
+            self?.handleButtonPress(name: name, pressed: pressed)
+        }
+    }
+
+    private func handleButtonPress(name: String, pressed: Bool) {
+        guard Accessibility.isTrusted else { return }
+        guard !ShortcutRecordingState.shared.isRecording else { return }
+        let button = ControllerButton(name)
+        guard let shortcut = ShortcutStore.shared.shortcut(for: button) else { return }
+        switch shortcut {
+        case .mouse(let mouseButton):
+            handleMouseShortcut(mouseButton, pressed: pressed)
+        case .keyboard:
+            if pressed { ShortcutPerformer.perform(shortcut) }
+        }
+    }
+
+    private func handleMouseShortcut(_ button: MouseButton, pressed: Bool) {
+        switch button {
+        case .left:
+            pressed ? MouseEvents.leftDown() : MouseEvents.leftUp()
+        case .right:
+            pressed ? MouseEvents.rightDown() : MouseEvents.rightUp()
+        case .middle:
+            pressed ? MouseEvents.middleDown() : MouseEvents.middleUp()
+        }
     }
 }

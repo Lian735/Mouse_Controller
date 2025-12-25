@@ -13,6 +13,7 @@ enum MouseEvents {
     // Track button state to send proper drag events while a button is held
     private static var isLeftDown = false
     private static var isRightDown = false
+    private static var isMiddleDown = false
 
     // Use a dedicated event source to reduce suppression and behave like HID
     private static let source: CGEventSource? = {
@@ -60,6 +61,9 @@ enum MouseEvents {
         } else if isRightDown {
             type = .rightMouseDragged
             button = .right
+        } else if isMiddleDown {
+            type = .otherMouseDragged
+            button = .center
         } else {
             type = .mouseMoved
             button = .left
@@ -73,6 +77,8 @@ enum MouseEvents {
     static func leftUp()   { isLeftDown = false; mouse(.leftMouseUp, .left) }
     static func rightDown(){ isRightDown = true; mouse(.rightMouseDown, .right) }
     static func rightUp()  { isRightDown = false; mouse(.rightMouseUp, .right) }
+    static func middleDown() { isMiddleDown = true; mouse(.otherMouseDown, .center) }
+    static func middleUp() { isMiddleDown = false; mouse(.otherMouseUp, .center) }
 
     static func scroll(dx: Int32, dy: Int32) {
         guard let e = CGEvent(scrollWheelEvent2Source: source, units: .pixel, wheelCount: 2, wheel1: dy, wheel2: dx, wheel3: 0) else { return }
@@ -85,4 +91,3 @@ enum MouseEvents {
         e.post(tap: .cghidEventTap)
     }
 }
-
