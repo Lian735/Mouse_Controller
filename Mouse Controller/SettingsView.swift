@@ -23,8 +23,10 @@ struct SettingsView: View {
     @State private var selection: SettingsTab = .controls
     @State private var showDeleteAllConfirm: Bool = false
 
-    private var leftStickMapped: Bool { store.hasStickBindings(.left) }
-    private var rightStickMapped: Bool { store.hasStickBindings(.right) }
+    private var pointerStick: JoystickStick { settings.swapSticks ? .right : .left }
+    private var scrollStick: JoystickStick { settings.swapSticks ? .left : .right }
+    private var pointerStickMapped: Bool { store.hasStickBindings(pointerStick) }
+    private var scrollStickMapped: Bool { store.hasStickBindings(scrollStick) }
 
     var body: some View {
         TabView(selection: $selection) {
@@ -94,32 +96,39 @@ struct SettingsView: View {
 
                 SettingsCard(title: "Pointer") {
                     SettingSlider(title: "Cursor speed", value: $settings.cursorSpeed, range: 2...40, step: 1, valueText: "\(Int(settings.cursorSpeed))")
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     SettingSlider(title: "Pointer acceleration", value: $settings.pointerAcceleration, range: 0.1...3.0, step: 0.1, valueText: String(format: "%.1fx", settings.pointerAcceleration))
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     SettingSlider(title: "Deadzone", value: $settings.deadzone, range: 0.0...0.4, step: 0.01, valueText: String(format: "%.2f", settings.deadzone))
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     Toggle("Invert vertical", isOn: $settings.invertY)
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     Toggle("Invert horizontal", isOn: $settings.invertX)
-                        .disabled(leftStickMapped)
-                    if leftStickMapped {
-                        SettingsHint(text: "Left stick shortcuts are active. Remove Joystick Left bindings to restore pointer controls.")
+                        .disabled(pointerStickMapped)
+                    if pointerStickMapped {
+                        SettingsHint(text: "\(pointerStick.displayName) stick shortcuts are active. Remove Joystick \(pointerStick.displayName) bindings to restore pointer controls.")
                     }
                 }
 
                 SettingsCard(title: "Scrolling") {
                     SettingSlider(title: "Scroll speed", value: $settings.scrollSpeed, range: 2...60, step: 1, valueText: "\(Int(settings.scrollSpeed))")
-                        .disabled(rightStickMapped)
+                        .disabled(scrollStickMapped)
                     Toggle("Horizontal scroll", isOn: $settings.horizontalScrollEnabled)
-                        .disabled(rightStickMapped)
+                        .disabled(scrollStickMapped)
                     Toggle("Invert vertical scroll", isOn: $settings.invertScrollY)
-                        .disabled(rightStickMapped)
+                        .disabled(scrollStickMapped)
                     Toggle("Invert horizontal scroll", isOn: $settings.invertScrollX)
-                        .disabled(rightStickMapped)
-                    if rightStickMapped {
-                        SettingsHint(text: "Right stick shortcuts are active. Remove Joystick Right bindings to restore scrolling.")
+                        .disabled(scrollStickMapped)
+                    if scrollStickMapped {
+                        SettingsHint(text: "\(scrollStick.displayName) stick shortcuts are active. Remove Joystick \(scrollStick.displayName) bindings to restore scrolling.")
                     }
+                }
+
+                SettingsCard(title: "Joysticks") {
+                    Toggle("Use right stick for pointer", isOn: $settings.swapSticks)
+                    Text("When enabled, the right stick controls the pointer and the left stick scrolls.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(24)

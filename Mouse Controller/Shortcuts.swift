@@ -114,6 +114,10 @@ enum JoystickStick: String, CaseIterable {
     case right
 }
 
+extension JoystickStick {
+    var displayName: String { rawValue.capitalized }
+}
+
 enum JoystickDirection: String, CaseIterable {
     case up
     case down
@@ -513,4 +517,3 @@ enum ModifierKeyMapping {
         return allModifierCodes.first { $0.1 == keyCode }?.0
     }
 }
-

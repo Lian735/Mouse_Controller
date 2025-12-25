@@ -28,8 +28,8 @@ final class ControllerMouseService: ObservableObject {
     private var lastLeftDirection: JoystickDirection?
     private var lastRightDirection: JoystickDirection?
     private var experimentalCenter: CGPoint?
-    private var lastLeftMagnitude: Float = 0
-    private var lastLeftUpdate: TimeInterval = 0
+    private var lastPointerMagnitude: Float = 0
+    private var lastPointerUpdate: TimeInterval = 0
 
     func start() {
         if #available(macOS 10.15, *) {
@@ -101,15 +101,19 @@ final class ControllerMouseService: ObservableObject {
 
         let accel = Float(s.pointerAcceleration)
         let isRecording = ShortcutRecordingState.shared.isRecording
-        let leftStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(.left)
-        let rightStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(.right)
+        let pointerStick = s.swapSticks ? JoystickStick.right : .left
+        let scrollStick = s.swapSticks ? JoystickStick.left : .right
+        let pointerStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(pointerStick)
+        let scrollStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(scrollStick)
+        let (pointerX, pointerY) = axes(for: pointerStick)
+        let (scrollX, scrollY) = axes(for: scrollStick)
 
-        if s.experimentalTeleportEnabled, !leftStickMapped {
-            updateExperimentalPointer(settings: s)
+        if s.experimentalTeleportEnabled, !pointerStickMapped {
+            updateExperimentalPointer(settings: s, x: pointerX, y: pointerY)
         } else {
             experimentalCenter = nil
-            var dx = leftStickMapped ? 0 : applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-            var dy = leftStickMapped ? 0 : applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+            var dx = pointerStickMapped ? 0 : applyDeadzone(pointerX, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+            var dy = pointerStickMapped ? 0 : applyDeadzone(pointerY, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
 
             if s.invertY { dy = -dy }
             if s.invertX { dx = -dx }
@@ -119,8 +123,8 @@ final class ControllerMouseService: ObservableObject {
             }
         }
 
-        let rawScrollY = rightStickMapped ? 0 : applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        let rawScrollX = rightStickMapped ? 0 : applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        let rawScrollY = scrollStickMapped ? 0 : applyDeadzone(scrollY, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        let rawScrollX = scrollStickMapped ? 0 : applyDeadzone(scrollX, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
         var scrollY = rawScrollY
         if s.invertScrollY { scrollY = -scrollY }
         var scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
@@ -180,18 +184,18 @@ final class ControllerMouseService: ObservableObject {
         abs(v) < dz ? 0 : v
     }
 
-    private func updateExperimentalPointer(settings: AppSettings) {
+    private func updateExperimentalPointer(settings: AppSettings, x: Float, y: Float) {
         let now = CFAbsoluteTimeGetCurrent()
         let dz = Float(settings.deadzone)
-        var x = applyDeadzone(lx, dz: dz)
-        var y = applyDeadzone(ly, dz: dz)
+        var x = applyDeadzone(x, dz: dz)
+        var y = applyDeadzone(y, dz: dz)
 
         if settings.invertX { x = -x }
         if settings.invertY { y = -y }
 
         let magnitude = hypot(x, y)
-        let timeDelta = lastLeftUpdate == 0 ? 0 : now - lastLeftUpdate
-        let quickRelease = magnitude == 0 && lastLeftMagnitude > 0.35 && timeDelta < 0.08
+        let timeDelta = lastPointerUpdate == 0 ? 0 : now - lastPointerUpdate
+        let quickRelease = magnitude == 0 && lastPointerMagnitude > 0.35 && timeDelta < 0.08
 
         if experimentalCenter == nil {
             experimentalCenter = MouseEvents.location()
@@ -242,8 +246,17 @@ final class ControllerMouseService: ObservableObject {
             }
         }
 
-        lastLeftMagnitude = magnitude
-        lastLeftUpdate = now
+        lastPointerMagnitude = magnitude
+        lastPointerUpdate = now
+    }
+
+    private func axes(for stick: JoystickStick) -> (Float, Float) {
+        switch stick {
+        case .left:
+            return (lx, ly)
+        case .right:
+            return (rx, ry)
+        }
     }
 
     private func bindButton(_ input: GCControllerButtonInput?, name: String) {
