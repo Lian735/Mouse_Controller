@@ -242,7 +242,25 @@ enum ShortcutPerformer {
         case .mouse(let button):
             performMouse(button)
         case .keyboard(let ks):
-            performKeyboard(ks)
+            performKeyboardPress(ks)
+        }
+    }
+
+    static func keyDown(_ shortcut: Shortcut) {
+        switch shortcut {
+        case .mouse:
+            break
+        case .keyboard(let ks):
+            performKeyboardDown(ks)
+        }
+    }
+
+    static func keyUp(_ shortcut: Shortcut) {
+        switch shortcut {
+        case .mouse:
+            break
+        case .keyboard(let ks):
+            performKeyboardUp(ks)
         }
     }
 
@@ -278,7 +296,12 @@ enum ShortcutPerformer {
         }
     }
 
-    private static func performKeyboard(_ ks: KeyboardShortcut) {
+    private static func performKeyboardPress(_ ks: KeyboardShortcut) {
+        performKeyboardDown(ks)
+        performKeyboardUp(ks)
+    }
+
+    private static func performKeyboardDown(_ ks: KeyboardShortcut) {
         guard let src = CGEventSource(stateID: .hidSystemState) else {
             #if DEBUG
             print("Failed to create CGEventSource; check Accessibility permissions.")
@@ -300,7 +323,6 @@ enum ShortcutPerformer {
                 #endif
             }
         }
-        // Key down/up
         if let down = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: true) {
             down.flags = ks.modifiers
             down.post(tap: .cghidEventTap)
@@ -309,6 +331,21 @@ enum ShortcutPerformer {
             print("Failed to create key down for keyCode: \(ks.keyCode)")
             #endif
         }
+    }
+
+    private static func performKeyboardUp(_ ks: KeyboardShortcut) {
+        guard let src = CGEventSource(stateID: .hidSystemState) else {
+            #if DEBUG
+            print("Failed to create CGEventSource; check Accessibility permissions.")
+            #endif
+            return
+        }
+        let mods: [(CGEventFlags, CGKeyCode)] = [
+            (.maskCommand, 0x37), // Command
+            (.maskShift,   0x38), // Shift
+            (.maskAlternate, 0x3A), // Option
+            (.maskControl, 0x3B) // Control
+        ]
         if let up = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: false) {
             up.flags = ks.modifiers
             up.post(tap: .cghidEventTap)
@@ -350,6 +387,10 @@ enum KeyCodeNames {
         case 0x00: return "A"
         case 0x0B: return "B"
         case 0x0C: return "="
+        case 0x37, 0x36: return "Command"
+        case 0x38, 0x3C: return "Shift"
+        case 0x3A, 0x3D: return "Option"
+        case 0x3B, 0x3E: return "Control"
         default: return String(format: "0x%02X", keyCode)
         }
     }

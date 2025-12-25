@@ -263,7 +263,11 @@ final class ControllerMouseService: ObservableObject {
         case .mouse(let mouseButton):
             handleMouseShortcut(mouseButton, pressed: pressed)
         case .keyboard:
-            if pressed { ShortcutPerformer.perform(shortcut) }
+            if pressed {
+                ShortcutPerformer.keyDown(shortcut)
+            } else {
+                ShortcutPerformer.keyUp(shortcut)
+            }
         }
     }
 
@@ -302,4 +306,3 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 }
-
