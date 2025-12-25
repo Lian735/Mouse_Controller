@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Accessibility.requestPromptIfNeeded()
         ControllerMouseService.shared.start()
+        _ = ControllerInputManager.shared
     }
 
     private func setupStatusItem() {

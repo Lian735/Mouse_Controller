@@ -63,18 +63,33 @@ struct ControllerButton: Hashable, Codable, CustomStringConvertible {
 @MainActor
 final class ShortcutStore: ObservableObject {
     static let shared = ShortcutStore()
-    private init() { load() }
+    private init() {
+        let loaded = load()
+        if !loaded {
+            bindings = Self.defaultBindings
+        } else if bindings.isEmpty {
+            bindings = Self.defaultBindings
+        }
+    }
 
-    @Published var bindings: [ControllerButton: Shortcut] = [:] { didSet { save() } }
+    @Published var bindings: [ControllerButton: Shortcut?] = [:] { didSet { save() } }
 
     private let d = UserDefaults.standard
     private let k = "ControllerMouseShortcuts"
 
-    private func load() {
-        guard let data = d.data(forKey: k) else { return }
-        if let decoded = try? JSONDecoder().decode([ControllerButton: Shortcut].self, from: data) {
+    private static let defaultBindings: [ControllerButton: Shortcut?] = [
+        ControllerButton("ButtonX"): .some(.mouse(.left)),
+        ControllerButton("ButtonB"): .some(.mouse(.right))
+    ]
+
+    @discardableResult
+    private func load() -> Bool {
+        guard let data = d.data(forKey: k) else { return false }
+        if let decoded = try? JSONDecoder().decode([ControllerButton: Shortcut?].self, from: data) {
             bindings = decoded
+            return true
         }
+        return false
     }
 
     private func save() {
@@ -84,15 +99,25 @@ final class ShortcutStore: ObservableObject {
     }
 
     func set(_ shortcut: Shortcut?, for button: ControllerButton) {
-        if let s = shortcut { bindings[button] = s } else { bindings.removeValue(forKey: button) }
+        if let s = shortcut {
+            bindings[button] = .some(s)
+        } else {
+            bindings[button] = .some(nil)
+        }
     }
 
-    func shortcut(for button: ControllerButton) -> Shortcut? { bindings[button] }
+    func shortcut(for button: ControllerButton) -> Shortcut? { bindings[button] ?? nil }
 
     func reset() {
         bindings.removeAll()
         d.removeObject(forKey: k)
         objectWillChange.send()
+    }
+
+    func ensureButton(_ button: ControllerButton) {
+        if bindings[button] == nil {
+            bindings[button] = .some(nil)
+        }
     }
 }
 
@@ -217,4 +242,3 @@ enum KeyCodeNames {
         }
     }
 }
-
