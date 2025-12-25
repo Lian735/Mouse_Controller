@@ -26,6 +26,7 @@ final class AppSettings: ObservableObject {
     @Published var horizontalScrollEnabled: Bool = true { didSet { save() } }
     @Published var experimentalTeleportEnabled: Bool = false { didSet { save() } }
     @Published var experimentalTeleportRadius: Double = 260 { didSet { save() } }
+    @Published var useRightStickForPointer: Bool = false { didSet { save() } }
 
     private let d = UserDefaults.standard
     private let k = "ControllerMouseSettings"
@@ -44,6 +45,7 @@ final class AppSettings: ObservableObject {
         horizontalScrollEnabled = obj["horizontalScrollEnabled"] as? Bool ?? horizontalScrollEnabled
         experimentalTeleportEnabled = obj["experimentalTeleportEnabled"] as? Bool ?? experimentalTeleportEnabled
         experimentalTeleportRadius = obj["experimentalTeleportRadius"] as? Double ?? experimentalTeleportRadius
+        useRightStickForPointer = obj["useRightStickForPointer"] as? Bool ?? useRightStickForPointer
     }
 
     private func save() {
@@ -59,7 +61,8 @@ final class AppSettings: ObservableObject {
             "invertX": invertX,
             "horizontalScrollEnabled": horizontalScrollEnabled,
             "experimentalTeleportEnabled": experimentalTeleportEnabled,
-            "experimentalTeleportRadius": experimentalTeleportRadius
+            "experimentalTeleportRadius": experimentalTeleportRadius,
+            "useRightStickForPointer": useRightStickForPointer
         ], forKey: k)
     }
 }

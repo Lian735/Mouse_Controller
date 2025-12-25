@@ -25,6 +25,12 @@ struct SettingsView: View {
 
     private var leftStickMapped: Bool { store.hasStickBindings(.left) }
     private var rightStickMapped: Bool { store.hasStickBindings(.right) }
+    private var pointerStickMapped: Bool {
+        settings.useRightStickForPointer ? rightStickMapped : leftStickMapped
+    }
+    private var scrollStickMapped: Bool {
+        settings.useRightStickForPointer ? leftStickMapped : rightStickMapped
+    }
 
     var body: some View {
         TabView(selection: $selection) {
@@ -93,37 +99,50 @@ struct SettingsView: View {
                 }
 
                 SettingsCard(title: "Pointer") {
+                    Toggle("Use right stick for pointer", isOn: $settings.useRightStickForPointer)
                     SettingSlider(title: "Cursor speed", value: $settings.cursorSpeed, range: 2...40, step: 1, valueText: "\(Int(settings.cursorSpeed))")
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     SettingSlider(title: "Pointer acceleration", value: $settings.pointerAcceleration, range: 0.1...3.0, step: 0.1, valueText: String(format: "%.1fx", settings.pointerAcceleration))
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     SettingSlider(title: "Deadzone", value: $settings.deadzone, range: 0.0...0.4, step: 0.01, valueText: String(format: "%.2f", settings.deadzone))
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     Toggle("Invert vertical", isOn: $settings.invertY)
-                        .disabled(leftStickMapped)
+                        .disabled(pointerStickMapped)
                     Toggle("Invert horizontal", isOn: $settings.invertX)
-                        .disabled(leftStickMapped)
-                    if leftStickMapped {
-                        SettingsHint(text: "Left stick shortcuts are active. Remove Joystick Left bindings to restore pointer controls.")
+                        .disabled(pointerStickMapped)
+                    if pointerStickMapped {
+                        SettingsHint(text: pointerStickHint)
                     }
                 }
 
                 SettingsCard(title: "Scrolling") {
                     SettingSlider(title: "Scroll speed", value: $settings.scrollSpeed, range: 2...60, step: 1, valueText: "\(Int(settings.scrollSpeed))")
-                        .disabled(rightStickMapped)
+                        .disabled(scrollStickMapped)
                     Toggle("Horizontal scroll", isOn: $settings.horizontalScrollEnabled)
-                        .disabled(rightStickMapped)
+                        .disabled(scrollStickMapped)
                     Toggle("Invert vertical scroll", isOn: $settings.invertScrollY)
-                        .disabled(rightStickMapped)
+                        .disabled(scrollStickMapped)
                     Toggle("Invert horizontal scroll", isOn: $settings.invertScrollX)
-                        .disabled(rightStickMapped)
-                    if rightStickMapped {
-                        SettingsHint(text: "Right stick shortcuts are active. Remove Joystick Right bindings to restore scrolling.")
+                        .disabled(scrollStickMapped)
+                    if scrollStickMapped {
+                        SettingsHint(text: scrollStickHint)
                     }
                 }
             }
             .padding(24)
         }
+    }
+
+    private var pointerStickHint: String {
+        settings.useRightStickForPointer
+            ? "Right stick shortcuts are active. Remove Joystick Right bindings to restore pointer controls."
+            : "Left stick shortcuts are active. Remove Joystick Left bindings to restore pointer controls."
+    }
+
+    private var scrollStickHint: String {
+        settings.useRightStickForPointer
+            ? "Left stick shortcuts are active. Remove Joystick Left bindings to restore scrolling."
+            : "Right stick shortcuts are active. Remove Joystick Right bindings to restore scrolling."
     }
 
     private var shortcutsTab: some View {
@@ -367,10 +386,6 @@ struct ShortcutRow: View {
     }
 
     private func removeButton() {
-        if JoystickBinding.stick(for: button.name) != nil {
-            store.removeStickBindings(for: button)
-        } else {
-            store.removeButton(button)
-        }
+        store.removeButton(button)
     }
 }
