@@ -98,12 +98,15 @@ final class ControllerMouseService: ObservableObject {
         let s = AppSettings.shared
         guard s.enabled else { return }
         guard Accessibility.isTrusted else { return }
+        let isRecording = ShortcutRecordingState.shared.isRecording
 
         let accel = Float(s.pointerAcceleration)
         let leftStickMapped = ShortcutStore.shared.hasStickBindings(.left)
         let rightStickMapped = ShortcutStore.shared.hasStickBindings(.right)
 
-        if s.experimentalTeleportEnabled, !leftStickMapped {
+        if isRecording {
+            experimentalCenter = nil
+        } else if s.experimentalTeleportEnabled, !leftStickMapped {
             updateExperimentalPointer(settings: s)
         } else {
             experimentalCenter = nil
@@ -118,14 +121,16 @@ final class ControllerMouseService: ObservableObject {
             }
         }
 
-        let rawScrollY = rightStickMapped ? 0 : applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        let rawScrollX = rightStickMapped ? 0 : applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        var scrollY = rawScrollY
-        if s.invertScrollY { scrollY = -scrollY }
-        var scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
-        if s.invertScrollX { scrollX = -scrollX }
-        if scrollX != 0 || scrollY != 0 {
-            MouseEvents.scroll(dx: Int32(scrollX), dy: Int32(-scrollY))
+        if !isRecording {
+            let rawScrollY = rightStickMapped ? 0 : applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+            let rawScrollX = rightStickMapped ? 0 : applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+            var scrollY = rawScrollY
+            if s.invertScrollY { scrollY = -scrollY }
+            var scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
+            if s.invertScrollX { scrollX = -scrollX }
+            if scrollX != 0 || scrollY != 0 {
+                MouseEvents.scroll(dx: Int32(scrollX), dy: Int32(-scrollY))
+            }
         }
     }
 
@@ -254,15 +259,17 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 
-    private func handleButtonPress(name: String, pressed: Bool) {
+    private func handleButtonPress(name: String, pressed: Bool, allowWhileRecording: Bool = false) {
         guard Accessibility.isTrusted else { return }
-        guard !ShortcutRecordingState.shared.isRecording else { return }
+        if ShortcutRecordingState.shared.isRecording && !allowWhileRecording { return }
         let button = ControllerButton(name)
         guard let shortcut = ShortcutStore.shared.shortcut(for: button) else { return }
         switch shortcut {
         case .mouse(let mouseButton):
             handleMouseShortcut(mouseButton, pressed: pressed)
         case .keyboard:
+            if pressed { ShortcutPerformer.perform(shortcut) }
+        case .system:
             if pressed { ShortcutPerformer.perform(shortcut) }
         }
     }
@@ -287,12 +294,12 @@ final class ControllerMouseService: ObservableObject {
 
         if let lastDirection {
             let name = JoystickBinding.buttonName(for: stick, direction: lastDirection)
-            handleButtonPress(name: name, pressed: false)
+            handleButtonPress(name: name, pressed: false, allowWhileRecording: true)
         }
 
         if let direction {
             let name = JoystickBinding.buttonName(for: stick, direction: direction)
-            handleButtonPress(name: name, pressed: true)
+            handleButtonPress(name: name, pressed: true, allowWhileRecording: true)
         }
 
         if stick == .left {
@@ -302,4 +309,3 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 }
-
