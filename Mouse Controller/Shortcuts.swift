@@ -1,6 +1,8 @@
 import Foundation
 import ApplicationServices
 import Combine
+import AppKit
+import IOKit.hidsystem
 
 enum MouseButton: Int, Codable, CaseIterable, CustomStringConvertible {
     case left = 0
@@ -13,28 +15,49 @@ enum MouseButton: Int, Codable, CaseIterable, CustomStringConvertible {
 }
 
 struct KeyboardShortcut: Codable, Equatable {
-    var keyCode: CGKeyCode
+    var keyCode: CGKeyCode?
+    var systemKey: Int32?
     var modifiers: CGEventFlags
 
-    private enum CodingKeys: String, CodingKey { case keyCode, modifiers }
+    private enum CodingKeys: String, CodingKey { case keyCode, systemKey, modifiers }
 
     init(keyCode: CGKeyCode, modifiers: CGEventFlags) {
         self.keyCode = keyCode
+        self.systemKey = nil
+        self.modifiers = modifiers
+    }
+
+    init(systemKey: Int32, modifiers: CGEventFlags) {
+        self.keyCode = nil
+        self.systemKey = systemKey
         self.modifiers = modifiers
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let keyCodeRaw = try container.decode(UInt16.self, forKey: .keyCode)
         let modifiersRaw = try container.decode(UInt64.self, forKey: .modifiers)
-        self.keyCode = CGKeyCode(keyCodeRaw)
         self.modifiers = CGEventFlags(rawValue: modifiersRaw)
+        if let systemKey = try container.decodeIfPresent(Int32.self, forKey: .systemKey) {
+            self.systemKey = systemKey
+            self.keyCode = nil
+        } else if let keyCodeRaw = try container.decodeIfPresent(UInt16.self, forKey: .keyCode) {
+            self.keyCode = CGKeyCode(keyCodeRaw)
+            self.systemKey = nil
+        } else {
+            self.keyCode = nil
+            self.systemKey = nil
+        }
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(UInt16(keyCode), forKey: .keyCode)
         try container.encode(modifiers.rawValue, forKey: .modifiers)
+        if let keyCode {
+            try container.encode(UInt16(keyCode), forKey: .keyCode)
+        }
+        if let systemKey {
+            try container.encode(systemKey, forKey: .systemKey)
+        }
     }
 }
 
@@ -45,7 +68,7 @@ enum Shortcut: Codable, Equatable, CustomStringConvertible {
     var description: String {
         switch self {
         case .keyboard(let k):
-            return ShortcutFormatter.format(modifiers: k.modifiers, keyCode: k.keyCode)
+            return ShortcutFormatter.format(modifiers: k.modifiers, keyCode: k.keyCode, systemKey: k.systemKey)
         case .mouse(let b):
             return b.description
         }
@@ -285,59 +308,115 @@ enum ShortcutPerformer {
             #endif
             return
         }
+        var modifiersToPress = ks.modifiers
+        if let flag = ModifierKeyMapping.flag(for: ks.keyCode) {
+            modifiersToPress = modifiersToPress.subtracting(flag)
+        }
         // Press modifiers
-        let mods: [(CGEventFlags, CGKeyCode)] = [
-            (.maskCommand, 0x37), // Command
-            (.maskShift,   0x38), // Shift
-            (.maskAlternate, 0x3A), // Option
-            (.maskControl, 0x3B) // Control
-        ]
-        for (flag, code) in mods where ks.modifiers.contains(flag) {
-            if let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true) { e.flags = flag; e.post(tap: .cghidEventTap) }
-            else {
+        for (flag, code) in ModifierKeyMapping.modifierKeyCodes where modifiersToPress.contains(flag) {
+            if let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true) {
+                e.flags = flag
+                e.post(tap: .cghidEventTap)
+            } else {
                 #if DEBUG
                 print("Failed to create key down for modifier: \(flag)")
                 #endif
             }
         }
-        // Key down/up
-        if let down = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: true) {
-            down.flags = ks.modifiers
-            down.post(tap: .cghidEventTap)
-        } else {
-            #if DEBUG
-            print("Failed to create key down for keyCode: \(ks.keyCode)")
-            #endif
+
+        if let systemKey = ks.systemKey {
+            postSystemKey(systemKey, modifiers: ks.modifiers)
+        } else if let keyCode = ks.keyCode {
+            if let down = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: true) {
+                down.flags = ks.modifiers
+                down.post(tap: .cghidEventTap)
+            } else {
+                #if DEBUG
+                print("Failed to create key down for keyCode: \(keyCode)")
+                #endif
+            }
+            if let up = CGEvent(keyboardEventSource: src, virtualKey: keyCode, keyDown: false) {
+                up.flags = ks.modifiers
+                up.post(tap: .cghidEventTap)
+            } else {
+                #if DEBUG
+                print("Failed to create key up for keyCode: \(keyCode)")
+                #endif
+            }
         }
-        if let up = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: false) {
-            up.flags = ks.modifiers
-            up.post(tap: .cghidEventTap)
-        } else {
-            #if DEBUG
-            print("Failed to create key up for keyCode: \(ks.keyCode)")
-            #endif
-        }
+
         // Release modifiers
-        for (flag, code) in mods.reversed() where ks.modifiers.contains(flag) {
-            if let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false) { e.flags = flag; e.post(tap: .cghidEventTap) }
-            else {
+        for (flag, code) in ModifierKeyMapping.modifierKeyCodes.reversed() where modifiersToPress.contains(flag) {
+            if let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false) {
+                e.flags = flag
+                e.post(tap: .cghidEventTap)
+            } else {
                 #if DEBUG
                 print("Failed to create key up for modifier: \(flag)")
                 #endif
             }
         }
     }
+
+    private static func postSystemKey(_ key: Int32, modifiers: CGEventFlags) {
+        let keyDownData = systemKeyData(key: key, keyDown: true)
+        let keyUpData = systemKeyData(key: key, keyDown: false)
+
+        if let down = systemEvent(data1: keyDownData, modifiers: modifiers) {
+            down.post(tap: .cghidEventTap)
+        } else {
+            #if DEBUG
+            print("Failed to create system-defined key down for key: \(key)")
+            #endif
+        }
+        if let up = systemEvent(data1: keyUpData, modifiers: modifiers) {
+            up.post(tap: .cghidEventTap)
+        } else {
+            #if DEBUG
+            print("Failed to create system-defined key up for key: \(key)")
+            #endif
+        }
+    }
+
+    private static func systemKeyData(key: Int32, keyDown: Bool) -> Int32 {
+        let state: Int32 = keyDown ? 0xA00 : 0xB00
+        return (key << 16) | state
+    }
+
+    private static func systemEvent(data1: Int32, modifiers: CGEventFlags) -> CGEvent? {
+        let nsEvent = NSEvent.otherEvent(
+            with: .systemDefined,
+            location: .zero,
+            modifierFlags: modifiers,
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: 0,
+            context: nil,
+            subtype: Int16(NX_SUBTYPE_AUX_CONTROL_BUTTONS),
+            data1: Int(data1),
+            data2: -1
+        )
+        return nsEvent?.cgEvent
+    }
 }
 
 enum ShortcutFormatter {
-    static func format(modifiers: CGEventFlags, keyCode: CGKeyCode) -> String {
+    static func format(modifiers: CGEventFlags, keyCode: CGKeyCode?, systemKey: Int32?) -> String {
         var parts: [String] = []
-        if modifiers.contains(.maskCommand) { parts.append("⌘") }
-        if modifiers.contains(.maskShift) { parts.append("⇧") }
-        if modifiers.contains(.maskAlternate) { parts.append("⌥") }
-        if modifiers.contains(.maskControl) { parts.append("⌃") }
-        let key = KeyCodeNames.name(for: keyCode)
-        parts.append(key)
+        var displayModifiers = modifiers
+        if let keyCode, let flag = ModifierKeyMapping.flag(for: keyCode) {
+            displayModifiers = displayModifiers.subtracting(flag)
+        }
+        if displayModifiers.contains(.maskCommand) { parts.append("⌘") }
+        if displayModifiers.contains(.maskShift) { parts.append("⇧") }
+        if displayModifiers.contains(.maskAlternate) { parts.append("⌥") }
+        if displayModifiers.contains(.maskControl) { parts.append("⌃") }
+        if let systemKey {
+            parts.append(SystemKeyNames.name(for: systemKey))
+        } else if let keyCode {
+            parts.append(KeyCodeNames.name(for: keyCode))
+        } else {
+            parts.append("Unknown")
+        }
         return parts.joined()
     }
 }
@@ -346,11 +425,60 @@ enum KeyCodeNames {
     static func name(for keyCode: CGKeyCode) -> String {
         // Minimal mapping; fall back to hex code
         switch keyCode {
+        case 0x38, 0x3C: return "Shift"
+        case 0x3B, 0x3E: return "Control"
+        case 0x3A, 0x3D: return "Option"
+        case 0x37, 0x36: return "Command"
+        case 0x39: return "Caps Lock"
         case 0x08: return "C"
         case 0x00: return "A"
         case 0x0B: return "B"
         case 0x0C: return "="
         default: return String(format: "0x%02X", keyCode)
         }
+    }
+}
+
+enum SystemKeyNames {
+    static func name(for key: Int32) -> String {
+        switch key {
+        case NX_KEYTYPE_MISSION_CONTROL: return "Mission Control"
+        case NX_KEYTYPE_LAUNCHPAD: return "Launchpad"
+        case NX_KEYTYPE_BRIGHTNESS_UP: return "Brightness Up"
+        case NX_KEYTYPE_BRIGHTNESS_DOWN: return "Brightness Down"
+        case NX_KEYTYPE_SOUND_UP: return "Sound Up"
+        case NX_KEYTYPE_SOUND_DOWN: return "Sound Down"
+        case NX_KEYTYPE_MUTE: return "Mute"
+        case NX_KEYTYPE_PLAY: return "Play/Pause"
+        case NX_KEYTYPE_FAST: return "Next"
+        case NX_KEYTYPE_REWIND: return "Previous"
+        default: return String(format: "System 0x%02X", key)
+        }
+    }
+}
+
+enum ModifierKeyMapping {
+    static let modifierKeyCodes: [(CGEventFlags, CGKeyCode)] = [
+        (.maskCommand, 0x37),
+        (.maskShift, 0x38),
+        (.maskAlternate, 0x3A),
+        (.maskControl, 0x3B),
+        (.maskAlphaShift, 0x39)
+    ]
+
+    static func flag(for keyCode: CGKeyCode?) -> CGEventFlags? {
+        guard let keyCode else { return nil }
+        let allModifierCodes: [(CGEventFlags, CGKeyCode)] = [
+            (.maskCommand, 0x37),
+            (.maskCommand, 0x36),
+            (.maskShift, 0x38),
+            (.maskShift, 0x3C),
+            (.maskAlternate, 0x3A),
+            (.maskAlternate, 0x3D),
+            (.maskControl, 0x3B),
+            (.maskControl, 0x3E),
+            (.maskAlphaShift, 0x39)
+        ]
+        return allModifierCodes.first { $0.1 == keyCode }?.0
     }
 }

@@ -100,8 +100,9 @@ final class ControllerMouseService: ObservableObject {
         guard Accessibility.isTrusted else { return }
 
         let accel = Float(s.pointerAcceleration)
-        let leftStickMapped = ShortcutStore.shared.hasStickBindings(.left)
-        let rightStickMapped = ShortcutStore.shared.hasStickBindings(.right)
+        let isRecording = ShortcutRecordingState.shared.isRecording
+        let leftStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(.left)
+        let rightStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(.right)
 
         if s.experimentalTeleportEnabled, !leftStickMapped {
             updateExperimentalPointer(settings: s)
@@ -280,8 +281,15 @@ final class ControllerMouseService: ObservableObject {
 
     private func handleJoystickDirection(stick: JoystickStick, x: Float, y: Float) {
         guard Accessibility.isTrusted else { return }
-        guard !ShortcutRecordingState.shared.isRecording else { return }
         let direction = JoystickBinding.direction(forX: x, y: y)
+        if ShortcutRecordingState.shared.isRecording {
+            if stick == .left {
+                lastLeftDirection = direction
+            } else {
+                lastRightDirection = direction
+            }
+            return
+        }
         let lastDirection = stick == .left ? lastLeftDirection : lastRightDirection
         guard direction != lastDirection else { return }
 
@@ -302,4 +310,3 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 }
-
