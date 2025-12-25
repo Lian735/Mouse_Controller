@@ -103,24 +103,13 @@ final class ControllerMouseService: ObservableObject {
         let isRecording = ShortcutRecordingState.shared.isRecording
         let leftStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(.left)
         let rightStickMapped = !isRecording && ShortcutStore.shared.hasStickBindings(.right)
-        let useRightStickForPointer = s.useRightStickForPointer
-        let pointerStick: JoystickStick = useRightStickForPointer ? .right : .left
-        let scrollStick: JoystickStick = useRightStickForPointer ? .left : .right
 
-        let pointerX = useRightStickForPointer ? rx : lx
-        let pointerY = useRightStickForPointer ? ry : ly
-        let scrollX = useRightStickForPointer ? lx : rx
-        let scrollY = useRightStickForPointer ? ly : ry
-
-        let pointerStickMapped = pointerStick == .left ? leftStickMapped : rightStickMapped
-        let scrollStickMapped = scrollStick == .left ? leftStickMapped : rightStickMapped
-
-        if s.experimentalTeleportEnabled, !pointerStickMapped {
+        if s.experimentalTeleportEnabled, !leftStickMapped {
             updateExperimentalPointer(settings: s)
         } else {
             experimentalCenter = nil
-            var dx = pointerStickMapped ? 0 : applyDeadzone(pointerX, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-            var dy = pointerStickMapped ? 0 : applyDeadzone(pointerY, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+            var dx = leftStickMapped ? 0 : applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+            var dy = leftStickMapped ? 0 : applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
 
             if s.invertY { dy = -dy }
             if s.invertX { dx = -dx }
@@ -130,8 +119,8 @@ final class ControllerMouseService: ObservableObject {
             }
         }
 
-        let rawScrollY = scrollStickMapped ? 0 : applyDeadzone(scrollY, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        let rawScrollX = scrollStickMapped ? 0 : applyDeadzone(scrollX, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        let rawScrollY = rightStickMapped ? 0 : applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        let rawScrollX = rightStickMapped ? 0 : applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
         var scrollY = rawScrollY
         if s.invertScrollY { scrollY = -scrollY }
         var scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
@@ -194,11 +183,8 @@ final class ControllerMouseService: ObservableObject {
     private func updateExperimentalPointer(settings: AppSettings) {
         let now = CFAbsoluteTimeGetCurrent()
         let dz = Float(settings.deadzone)
-        let useRightStickForPointer = settings.useRightStickForPointer
-        let pointerX = useRightStickForPointer ? rx : lx
-        let pointerY = useRightStickForPointer ? ry : ly
-        var x = applyDeadzone(pointerX, dz: dz)
-        var y = applyDeadzone(pointerY, dz: dz)
+        var x = applyDeadzone(lx, dz: dz)
+        var y = applyDeadzone(ly, dz: dz)
 
         if settings.invertX { x = -x }
         if settings.invertY { y = -y }
