@@ -36,53 +36,62 @@ final class ControllerInputManager {
 
     private func wireExtendedGamepad(_ gp: GCExtendedGamepad) {
         // Face buttons
-        gp.buttonA.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonA") } }
-        gp.buttonB.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonB") } }
-        gp.buttonX.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonX") } }
-        gp.buttonY.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonY") } }
+        attachDetection(to: gp.buttonA, name: "ButtonA")
+        attachDetection(to: gp.buttonB, name: "ButtonB")
+        attachDetection(to: gp.buttonX, name: "ButtonX")
+        attachDetection(to: gp.buttonY, name: "ButtonY")
 
         // Shoulders
-        gp.leftShoulder.pressedChangedHandler  = { [weak self] _, _, pressed in if pressed { self?.postDetected("L1") } }
-        gp.rightShoulder.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("R1") } }
+        attachDetection(to: gp.leftShoulder, name: "L1")
+        attachDetection(to: gp.rightShoulder, name: "R1")
 
         // Triggers
-        gp.leftTrigger.pressedChangedHandler   = { [weak self] _, _, pressed in if pressed { self?.postDetected("L2") } }
-        gp.rightTrigger.pressedChangedHandler  = { [weak self] _, _, pressed in if pressed { self?.postDetected("R2") } }
+        attachDetection(to: gp.leftTrigger, name: "L2")
+        attachDetection(to: gp.rightTrigger, name: "R2")
 
         // D-pad
-        gp.dpad.up.pressedChangedHandler       = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadUp") } }
-        gp.dpad.down.pressedChangedHandler     = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadDown") } }
-        gp.dpad.left.pressedChangedHandler     = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadLeft") } }
-        gp.dpad.right.pressedChangedHandler    = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadRight") } }
+        attachDetection(to: gp.dpad.up, name: "DPadUp")
+        attachDetection(to: gp.dpad.down, name: "DPadDown")
+        attachDetection(to: gp.dpad.left, name: "DPadLeft")
+        attachDetection(to: gp.dpad.right, name: "DPadRight")
 
         // Menu/Options buttons (if available)
-        gp.buttonMenu.pressedChangedHandler    = { [weak self] _, _, pressed in if pressed { self?.postDetected("Menu") } }
-        gp.buttonOptions?.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("Options") } }
-        gp.buttonHome?.pressedChangedHandler    = { [weak self] _, _, pressed in if pressed { self?.postDetected("Home") } }
+        attachDetection(to: gp.buttonMenu, name: "Menu")
+        attachDetection(to: gp.buttonOptions, name: "Options")
+        attachDetection(to: gp.buttonHome, name: "Home")
 
         // Thumbstick buttons (if available)
-        gp.leftThumbstickButton?.pressedChangedHandler  = { [weak self] _, _, pressed in if pressed { self?.postDetected("L3") } }
-        gp.rightThumbstickButton?.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("R3") } }
+        attachDetection(to: gp.leftThumbstickButton, name: "L3")
+        attachDetection(to: gp.rightThumbstickButton, name: "R3")
     }
 
     private func wireMicroGamepad(_ gp: GCMicroGamepad) {
-        gp.buttonA.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonA") } }
-        gp.buttonX.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonX") } }
-        gp.dpad.up.pressedChangedHandler    = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadUp") } }
-        gp.dpad.down.pressedChangedHandler  = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadDown") } }
-        gp.dpad.left.pressedChangedHandler  = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadLeft") } }
-        gp.dpad.right.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadRight") } }
+        attachDetection(to: gp.buttonA, name: "ButtonA")
+        attachDetection(to: gp.buttonX, name: "ButtonX")
+        attachDetection(to: gp.dpad.up, name: "DPadUp")
+        attachDetection(to: gp.dpad.down, name: "DPadDown")
+        attachDetection(to: gp.dpad.left, name: "DPadLeft")
+        attachDetection(to: gp.dpad.right, name: "DPadRight")
     }
 
     private func wireGamepad(_ gp: GCGamepad) {
-        gp.buttonA.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonA") } }
-        gp.buttonB.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonB") } }
-        gp.buttonX.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonX") } }
-        gp.buttonY.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("ButtonY") } }
-        gp.dpad.up.pressedChangedHandler    = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadUp") } }
-        gp.dpad.down.pressedChangedHandler  = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadDown") } }
-        gp.dpad.left.pressedChangedHandler  = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadLeft") } }
-        gp.dpad.right.pressedChangedHandler = { [weak self] _, _, pressed in if pressed { self?.postDetected("DPadRight") } }
+        attachDetection(to: gp.buttonA, name: "ButtonA")
+        attachDetection(to: gp.buttonB, name: "ButtonB")
+        attachDetection(to: gp.buttonX, name: "ButtonX")
+        attachDetection(to: gp.buttonY, name: "ButtonY")
+        attachDetection(to: gp.dpad.up, name: "DPadUp")
+        attachDetection(to: gp.dpad.down, name: "DPadDown")
+        attachDetection(to: gp.dpad.left, name: "DPadLeft")
+        attachDetection(to: gp.dpad.right, name: "DPadRight")
+    }
+
+    private func attachDetection(to input: GCControllerButtonInput?, name: String) {
+        guard let input else { return }
+        let existingHandler = input.pressedChangedHandler
+        input.pressedChangedHandler = { [weak self] button, value, pressed in
+            existingHandler?(button, value, pressed)
+            if pressed { self?.postDetected(name) }
+        }
     }
 
     private func postDetected(_ name: String) {
