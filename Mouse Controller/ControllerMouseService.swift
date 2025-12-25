@@ -63,51 +63,8 @@ final class ControllerMouseService: ObservableObject {
         controller = c
         controllerName = c.vendorName ?? "controller"
 
-        if let gp = c.extendedGamepad {
-            wireExtendedGamepad(gp)
-        }
+        guard let gp = c.extendedGamepad else { return }
 
-        if let gp = c.gamepad {
-            wireGamepad(gp)
-        }
-
-        if let gp = c.microGamepad {
-            wireMicroGamepad(gp)
-        }
-    }
-
-    private func detach() {
-        controller = nil
-        controllerName = "none"
-        lx = 0; ly = 0; rx = 0; ry = 0
-    }
-
-    private func tick() {
-        let s = AppSettings.shared
-        guard s.enabled else { return }
-        guard Accessibility.isTrusted else { return }
-
-        let accel = Float(s.pointerAcceleration)
-        var dx = applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-        var dy = applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-
-        if s.invertY { dy = -dy }
-
-        if dx != 0 || dy != 0 {
-            MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
-        }
-
-        let rawScrollY = applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        let rawScrollX = applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        var scrollY = rawScrollY
-        if s.invertScrollY { scrollY = -scrollY }
-        let scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
-        if scrollX != 0 || scrollY != 0 {
-            MouseEvents.scroll(dx: Int32(scrollX), dy: Int32(-scrollY))
-        }
-    }
-
-    private func wireExtendedGamepad(_ gp: GCExtendedGamepad) {
         gp.leftThumbstick.valueChangedHandler = { [weak self] _, x, y in
             self?.lx = x; self?.ly = y
         }
@@ -140,29 +97,35 @@ final class ControllerMouseService: ObservableObject {
         bindButton(gp.rightThumbstickButton, name: "R3")
     }
 
-    private func wireGamepad(_ gp: GCGamepad) {
-        bindButton(gp.buttonA, name: "ButtonA")
-        bindButton(gp.buttonB, name: "ButtonB")
-        bindButton(gp.buttonX, name: "ButtonX")
-        bindButton(gp.buttonY, name: "ButtonY")
-
-        bindButton(gp.leftShoulder, name: "L1")
-        bindButton(gp.rightShoulder, name: "R1")
-
-        bindButton(gp.dpad.up, name: "DPadUp")
-        bindButton(gp.dpad.down, name: "DPadDown")
-        bindButton(gp.dpad.left, name: "DPadLeft")
-        bindButton(gp.dpad.right, name: "DPadRight")
+    private func detach() {
+        controller = nil
+        controllerName = "none"
+        lx = 0; ly = 0; rx = 0; ry = 0
     }
 
-    private func wireMicroGamepad(_ gp: GCMicroGamepad) {
-        bindButton(gp.buttonA, name: "ButtonA")
-        bindButton(gp.buttonX, name: "ButtonX")
-        bindButton(gp.dpad.up, name: "DPadUp")
-        bindButton(gp.dpad.down, name: "DPadDown")
-        bindButton(gp.dpad.left, name: "DPadLeft")
-        bindButton(gp.dpad.right, name: "DPadRight")
-        bindButton(gp.buttonMenu, name: "Menu")
+    private func tick() {
+        let s = AppSettings.shared
+        guard s.enabled else { return }
+        guard Accessibility.isTrusted else { return }
+
+        let accel = Float(s.pointerAcceleration)
+        var dx = applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+        var dy = applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+
+        if s.invertY { dy = -dy }
+
+        if dx != 0 || dy != 0 {
+            MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
+        }
+
+        let rawScrollY = applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        let rawScrollX = applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        var scrollY = rawScrollY
+        if s.invertScrollY { scrollY = -scrollY }
+        let scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
+        if scrollX != 0 || scrollY != 0 {
+            MouseEvents.scroll(dx: Int32(scrollX), dy: Int32(-scrollY))
+        }
     }
 
     private func applyDeadzone(_ v: Float, dz: Float) -> Float {
