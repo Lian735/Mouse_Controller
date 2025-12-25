@@ -108,12 +108,15 @@ final class ControllerMouseService: ObservableObject {
         let (pointerX, pointerY) = axes(for: pointerStick)
         let (scrollX, scrollY) = axes(for: scrollStick)
 
-        if s.experimentalTeleportEnabled, !pointerStickMapped {
+        let pointerActive = !(pointerStickMapped || isRecording)
+        let scrollActive = !(scrollStickMapped || isRecording)
+
+        if s.experimentalTeleportEnabled, pointerActive {
             updateExperimentalPointer(settings: s, x: pointerX, y: pointerY)
         } else {
             experimentalCenter = nil
-            var dx = pointerStickMapped ? 0 : applyDeadzone(pointerX, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-            var dy = pointerStickMapped ? 0 : applyDeadzone(pointerY, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+            var dx = pointerActive ? applyDeadzone(pointerX, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel : 0
+            var dy = pointerActive ? applyDeadzone(pointerY, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel : 0
 
             if s.invertY { dy = -dy }
             if s.invertX { dx = -dx }
@@ -123,14 +126,16 @@ final class ControllerMouseService: ObservableObject {
             }
         }
 
-        let rawScrollY = scrollStickMapped ? 0 : applyDeadzone(scrollY, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        let rawScrollX = scrollStickMapped ? 0 : applyDeadzone(scrollX, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        var scrollY = rawScrollY
-        if s.invertScrollY { scrollY = -scrollY }
-        var scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
-        if s.invertScrollX { scrollX = -scrollX }
-        if scrollX != 0 || scrollY != 0 {
-            MouseEvents.scroll(dx: Int32(scrollX), dy: Int32(-scrollY))
+        // Only allow scrolling when the designated scroll stick is active and not used for pointing
+        let scrollEnabled = scrollActive && scrollStick != pointerStick
+        let rawScrollY = scrollEnabled ? applyDeadzone(scrollY, dz: Float(s.deadzone)) * Float(s.scrollSpeed) : 0
+        let rawScrollX = scrollEnabled ? applyDeadzone(scrollX, dz: Float(s.deadzone)) * Float(s.scrollSpeed) : 0
+        var adjustedScrollY = rawScrollY
+        if s.invertScrollY { adjustedScrollY = -adjustedScrollY }
+        var adjustedScrollX = s.horizontalScrollEnabled ? rawScrollX : 0
+        if s.invertScrollX { adjustedScrollX = -adjustedScrollX }
+        if adjustedScrollX != 0 || adjustedScrollY != 0 {
+            MouseEvents.scroll(dx: Int32(adjustedScrollX), dy: Int32(-adjustedScrollY))
         }
     }
 
@@ -323,3 +328,4 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 }
+
