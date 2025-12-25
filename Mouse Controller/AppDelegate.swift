@@ -25,7 +25,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "gamecontroller", accessibilityDescription: "Controller Mouse")
+            if let image = NSImage(named: "MouseController") {
+                // Ensure proper size and template rendering for the menu bar
+                image.size = NSSize(width: 18, height: 18)
+                image.isTemplate = true
+                button.image = image
+                button.imageScaling = .scaleProportionallyDown
+                #if DEBUG
+                print("[StatusItem] Loaded MouseController asset for status bar icon")
+                #endif
+            } else {
+                // Fallback to SF Symbol if asset is missing
+                let fallback = NSImage(systemSymbolName: "gamecontroller", accessibilityDescription: "Controller Mouse")
+                fallback?.size = NSSize(width: 18, height: 18)
+                fallback?.isTemplate = true
+                button.image = fallback
+                button.imageScaling = .scaleProportionallyDown
+                #if DEBUG
+                print("[StatusItem] Failed to load MouseController asset, using fallback symbol")
+                #endif
+            }
             button.action = #selector(togglePopover(_:))
             button.target = self
         }
@@ -47,3 +66,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 }
+
