@@ -39,7 +39,7 @@ struct StatusMenuView: View {
             HStack {
                 Text("Controller:")
                 Spacer()
-                Text(service.controllerStatusText())
+                Text(service.controllerName)
                     .foregroundStyle(.secondary)
             }
             if !Accessibility.isTrusted {
@@ -96,3 +96,4 @@ private struct AccessibilityStatusStyle: ViewModifier {
         }
     }
 }
+

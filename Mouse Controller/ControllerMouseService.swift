@@ -9,7 +9,6 @@
 import Foundation
 import GameController
 import Combine
-import CoreHaptics
 
 @MainActor
 final class ControllerMouseService: ObservableObject {
@@ -17,16 +16,10 @@ final class ControllerMouseService: ObservableObject {
     private init() {}
 
     @Published private(set) var controllerName: String = "none"
-    @Published private(set) var controllerBatteryLevel: Float?
-    @Published private(set) var controllerBatteryState: GCControllerBatteryState = .unknown
 
     private var controller: GCController?
     private var timer: Timer?
     private var activity: NSObjectProtocol?
-    private var cancellables = Set<AnyCancellable>()
-    private var autoDisabledForGameMode = false
-    private var wasEnabledBeforeGameMode = false
-    private var hapticsEngine: GCHapticsEngine?
 
     private var lx: Float = 0
     private var ly: Float = 0
@@ -74,21 +67,15 @@ final class ControllerMouseService: ObservableObject {
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
-
-        observeGameMode()
     }
 
     func setEnabled(_ enabled: Bool) {
-        if !enabled {
-            ShortcutExecutionState.shared.clear()
-        }
+        // hook for UI; tick() liest Settings direkt
     }
 
     private func attach(_ c: GCController) {
         controller = c
         controllerName = c.vendorName ?? "controller"
-        configureBattery(for: c)
-        hapticsEngine = nil
 
         if let gp = c.extendedGamepad {
             wireExtendedGamepad(gp)
@@ -102,9 +89,6 @@ final class ControllerMouseService: ObservableObject {
     private func detach() {
         controller = nil
         controllerName = "none"
-        controllerBatteryLevel = nil
-        controllerBatteryState = .unknown
-        hapticsEngine = nil
         lx = 0; ly = 0; rx = 0; ry = 0
         lastLeftDirection = nil
         lastRightDirection = nil
@@ -113,7 +97,6 @@ final class ControllerMouseService: ObservableObject {
     private func tick() {
         let s = AppSettings.shared
         guard s.enabled else { return }
-        if s.autoDisableInGameMode && GameModeMonitor.shared.isGameModeActive { return }
         guard Accessibility.isTrusted else { return }
 
         let accel = Float(s.pointerAcceleration)
@@ -296,20 +279,14 @@ final class ControllerMouseService: ObservableObject {
 
     private func handleButtonPress(name: String, pressed: Bool) {
         guard Accessibility.isTrusted else { return }
-        guard AppSettings.shared.enabled else { return }
-        if AppSettings.shared.autoDisableInGameMode && GameModeMonitor.shared.isGameModeActive { return }
         guard !ShortcutRecordingState.shared.isRecording else { return }
         let button = ControllerButton(name)
         guard let shortcut = ShortcutStore.shared.shortcut(for: button) else { return }
         switch shortcut {
         case .mouse(let mouseButton):
-            ShortcutExecutionState.shared.setActive(button, active: pressed)
             handleMouseShortcut(mouseButton, pressed: pressed)
         case .keyboard:
-            if pressed {
-                ShortcutExecutionState.shared.pulse(button)
-                ShortcutPerformer.perform(shortcut)
-            }
+            if pressed { ShortcutPerformer.perform(shortcut) }
         }
     }
 
@@ -326,8 +303,6 @@ final class ControllerMouseService: ObservableObject {
 
     private func handleJoystickDirection(stick: JoystickStick, x: Float, y: Float) {
         guard Accessibility.isTrusted else { return }
-        guard AppSettings.shared.enabled else { return }
-        if AppSettings.shared.autoDisableInGameMode && GameModeMonitor.shared.isGameModeActive { return }
         let direction = JoystickBinding.direction(forX: x, y: y)
         if ShortcutRecordingState.shared.isRecording {
             if stick == .left {
@@ -354,136 +329,6 @@ final class ControllerMouseService: ObservableObject {
             lastLeftDirection = direction
         } else {
             lastRightDirection = direction
-        }
-    }
-
-    private func configureBattery(for controller: GCController) {
-        guard let battery = controller.battery else {
-            controllerBatteryLevel = nil
-            controllerBatteryState = .unknown
-            return
-        }
-        updateBattery(battery)
-        battery.valueChangedHandler = { [weak self] battery in
-            Task { @MainActor in
-                self?.updateBattery(battery)
-            }
-        }
-    }
-
-    private func updateBattery(_ battery: GCControllerBattery) {
-        controllerBatteryLevel = battery.batteryLevel
-        controllerBatteryState = battery.batteryState
-    }
-
-    private func observeGameMode() {
-        GameModeMonitor.shared.$isGameModeActive
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.syncGameModeState()
-            }
-            .store(in: &cancellables)
-
-        AppSettings.shared.$autoDisableInGameMode
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.syncGameModeState()
-            }
-            .store(in: &cancellables)
-
-        syncGameModeState()
-    }
-
-    private func syncGameModeState() {
-        let settings = AppSettings.shared
-        guard settings.autoDisableInGameMode else {
-            if autoDisabledForGameMode && wasEnabledBeforeGameMode {
-                settings.enabled = true
-            }
-            autoDisabledForGameMode = false
-            wasEnabledBeforeGameMode = false
-            return
-        }
-
-        if GameModeMonitor.shared.isGameModeActive {
-            if settings.enabled {
-                wasEnabledBeforeGameMode = true
-                autoDisabledForGameMode = true
-                settings.enabled = false
-            }
-        } else if autoDisabledForGameMode && wasEnabledBeforeGameMode {
-            settings.enabled = true
-            autoDisabledForGameMode = false
-            wasEnabledBeforeGameMode = false
-        }
-    }
-
-    func vibrate(times: Int) {
-        guard times > 0 else { return }
-        for index in 0..<times {
-            let delay = Double(index) * 0.16
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                self?.playHapticPulse()
-            }
-        }
-    }
-
-    func controllerStatusText() -> String {
-        let name = controllerName.capitalized
-        guard let level = controllerBatteryLevel else { return name }
-        let percent = Int((level * 100).rounded())
-        let stateText = batteryStateText(controllerBatteryState)
-        if stateText.isEmpty {
-            return "\(name) • \(percent)%"
-        }
-        return "\(name) • \(percent)% (\(stateText))"
-    }
-
-    private func batteryStateText(_ state: GCControllerBatteryState) -> String {
-        switch state {
-        case .charging:
-            return "Charging"
-        case .full:
-            return "Full"
-        case .discharging:
-            return "Discharging"
-        case .unknown:
-            return ""
-        @unknown default:
-            return ""
-        }
-    }
-
-    private func playHapticPulse() {
-        guard #available(macOS 13.0, *) else { return }
-        guard let engine = hapticsEngine ?? createHapticsEngine() else { return }
-        do {
-            let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.7)
-            let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
-            let event = CHHapticEvent(eventType: .hapticTransient, parameters: [intensity, sharpness], relativeTime: 0)
-            let pattern = try CHHapticPattern(events: [event], parameters: [])
-            let player = try engine.makePlayer(with: pattern)
-            try engine.start()
-            try player.start(atTime: 0)
-        } catch {
-            #if DEBUG
-            print("Failed to play haptic: \(error.localizedDescription)")
-            #endif
-        }
-    }
-
-    @available(macOS 13.0, *)
-    private func createHapticsEngine() -> GCHapticsEngine? {
-        guard let haptics = controller?.haptics else { return nil }
-        do {
-            let engine = try haptics.createEngine(withLocality: .default)
-            hapticsEngine = engine
-            return engine
-        } catch {
-            #if DEBUG
-            print("Failed to create haptics engine: \(error.localizedDescription)")
-            #endif
-            return nil
         }
     }
 }
