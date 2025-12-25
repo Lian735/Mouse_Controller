@@ -298,6 +298,38 @@ final class ShortcutStore: ObservableObject {
     }
 }
 
+@MainActor
+final class ShortcutExecutionState: ObservableObject {
+    static let shared = ShortcutExecutionState()
+
+    @Published private(set) var activeButtons: Set<ControllerButton> = []
+
+    private init() {}
+
+    func setActive(_ button: ControllerButton, active: Bool) {
+        if active {
+            activeButtons.insert(button)
+        } else {
+            activeButtons.remove(button)
+        }
+    }
+
+    func pulse(_ button: ControllerButton, duration: TimeInterval = 0.25) {
+        setActive(button, active: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            self?.setActive(button, active: false)
+        }
+    }
+
+    func clear() {
+        activeButtons.removeAll()
+    }
+
+    func isActive(_ button: ControllerButton) -> Bool {
+        activeButtons.contains(button)
+    }
+}
+
 enum ShortcutPerformer {
     static func perform(_ shortcut: Shortcut) {
         #if DEBUG

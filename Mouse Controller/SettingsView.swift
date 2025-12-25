@@ -61,6 +61,9 @@ struct SettingsView: View {
             }
             isCapturingButton = false
         }
+        .onChange(of: settings.enabled) { _, newValue in
+            mouseService.setEnabled(newValue)
+        }
     }
 
     private var controlsTab: some View {
@@ -89,9 +92,18 @@ struct SettingsView: View {
                     }
                     Divider()
                     LabeledContent("Controller") {
-                        Text(mouseService.controllerName.capitalized)
+                        Text(mouseService.controllerStatusText())
                             .foregroundStyle(.secondary)
                     }
+                    SettingsHint(text: "Mouse Controller is optimized for macOS navigation, not games.")
+                }
+
+                SettingsCard(title: "System") {
+                    Toggle("Launch at login", isOn: $settings.launchAtLogin)
+                    Toggle("Automatically disable during Game Mode", isOn: $settings.autoDisableInGameMode)
+                    Text("When a frontmost app is categorized as a game, Mouse Controller pauses and resumes automatically.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 SettingsCard(title: "Pointer") {
@@ -168,7 +180,10 @@ struct SettingsView: View {
                                 .padding(16)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                                .onTapGesture { isCapturingButton = true }
+                                .onTapGesture {
+                                    mouseService.vibrate(times: 2)
+                                    isCapturingButton = true
+                                }
                                 .glassEffect(
                                     .regular,
                                     in: RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -327,6 +342,7 @@ private struct SettingSlider: View {
 
 struct ShortcutRow: View {
     @StateObject private var store = ShortcutStore.shared
+    @StateObject private var executionState = ShortcutExecutionState.shared
     let button: ControllerButton
     @State private var tempShortcut: Shortcut? = nil
 
@@ -362,6 +378,18 @@ struct ShortcutRow: View {
             }
         }
         .padding(12)
+        .background {
+            if executionState.isActive(button) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.18))
+            }
+        }
+        .overlay {
+            if executionState.isActive(button) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.accentColor.opacity(0.5), lineWidth: 1)
+            }
+        }
     }
 
     private var currentActionDescription: String {
