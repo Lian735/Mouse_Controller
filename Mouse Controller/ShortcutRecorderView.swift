@@ -10,10 +10,12 @@ struct ShortcutRecorderView: View {
 
     var body: some View {
         HStack {
-            Text(recorded?.description ?? "None")
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 6).stroke(.secondary))
+            if isRecording {
+                Text(recorded?.description ?? "None")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
+                    .background(RoundedRectangle(cornerRadius: 6).stroke(.secondary))
+            }
 
             Button(isRecording ? "Stop" : "Record") {
                 isRecording.toggle()

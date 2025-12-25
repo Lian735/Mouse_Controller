@@ -15,7 +15,26 @@ struct StatusMenuView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle("Enabled", isOn: $settings.enabled)
+            HStack(alignment: .center, spacing: 12) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Mouse Controller")
+                        .font(.headline)
+                }
+
+                Spacer()
+                
+                Toggle(isOn: $settings.enabled) {
+                    EmptyView()
+                }
+                .toggleStyle(.switch)
+                .accessibilityLabel("Enable Mouse Controller")
+            }
 
             HStack {
                 Text("Controller:")
@@ -23,33 +42,41 @@ struct StatusMenuView: View {
                 Text(service.controllerName)
                     .foregroundStyle(.secondary)
             }
-
-            HStack {
-                Text("Accessibility:")
-                Spacer()
-                Text(Accessibility.isTrusted ? "OK" : "Missing")
-                    .modifier(AccessibilityStatusStyle(isTrusted: Accessibility.isTrusted))
+            if !Accessibility.isTrusted {
+                HStack {
+                    Text("Permissions:")
+                    Spacer()
+                    Text("⚠️ Missing")
+                        .modifier(AccessibilityStatusStyle(isTrusted: Accessibility.isTrusted))
+                }
+                Button("Request Accessibility Permission") {
+                    Accessibility.requestPromptIfNeeded()
+                }
             }
 
             Divider()
 
-            Button("Request Accessibility Permission") {
-                Accessibility.requestPromptIfNeeded()
-            }
-
-            Group {
-                if #available(macOS 14.0, *) {
-                    SettingsLink {
-                        Label("Open Settings", systemImage: "gear")
-                    }
-                } else {
-                    Button("Open Settings") {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            HStack {
+                Group {
+                    if #available(macOS 14.0, *) {
+                        SettingsLink {
+                            Label("Open Settings", systemImage: "gear")
+                        }
+                    } else {
+                        Button("Open Settings") {
+                            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                        }
                     }
                 }
+                .buttonStyle(.glassProminent)
+                .tint(.gray.opacity(0.5))
+                
+                Spacer()
+                
+                Button("Quit") { NSApp.terminate(nil) }
+                    .buttonStyle(.glassProminent)
+                    .tint(.red.opacity(0.5))
             }
-
-            Button("Quit") { NSApp.terminate(nil) }
         }
         .padding(14)
         .onChange(of: settings.enabled) { _, newValue in

@@ -141,15 +141,18 @@ final class ShortcutStore: ObservableObject {
         } else if bindings.isEmpty {
             bindings = Self.defaultBindings
         }
+        loadVibration()
     }
 
     @Published var bindings: [ControllerButton: Shortcut?] = [:] { didSet { save() } }
+    @Published var vibrationEnabled: [ControllerButton: Bool] = [:] { didSet { saveVibration() } }
 
     private let d = UserDefaults.standard
     private let k = "ControllerMouseShortcuts"
+    private let kVibration = "ControllerMouseVibration"
 
     private static let defaultBindings: [ControllerButton: Shortcut?] = [
-        ControllerButton("ButtonX"): .some(.mouse(.left)),
+        ControllerButton("ButtonA"): .some(.mouse(.left)),
         ControllerButton("ButtonB"): .some(.mouse(.right))
     ]
 
@@ -169,6 +172,19 @@ final class ShortcutStore: ObservableObject {
         }
     }
 
+    private func loadVibration() {
+        if let data = d.data(forKey: kVibration),
+           let decoded = try? JSONDecoder().decode([ControllerButton: Bool].self, from: data) {
+            vibrationEnabled = decoded
+        }
+    }
+
+    private func saveVibration() {
+        if let data = try? JSONEncoder().encode(vibrationEnabled) {
+            d.set(data, forKey: kVibration)
+        }
+    }
+
     func set(_ shortcut: Shortcut?, for button: ControllerButton) {
         if let s = shortcut {
             bindings[button] = .some(s)
@@ -178,6 +194,9 @@ final class ShortcutStore: ObservableObject {
     }
 
     func shortcut(for button: ControllerButton) -> Shortcut? { bindings[button] ?? nil }
+
+    func isVibrationEnabled(for button: ControllerButton) -> Bool { vibrationEnabled[button] ?? false }
+    func setVibration(_ enabled: Bool, for button: ControllerButton) { vibrationEnabled[button] = enabled }
 
     func reset() {
         bindings.removeAll()

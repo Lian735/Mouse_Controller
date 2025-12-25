@@ -21,6 +21,7 @@ struct SettingsView: View {
     @StateObject private var mouseService = ControllerMouseService.shared
     @State private var isCapturingButton: Bool = false
     @State private var selection: SettingsTab = .controls
+    @State private var showDeleteAllConfirm: Bool = false
 
     private var leftStickMapped: Bool { store.hasStickBindings(.left) }
     private var rightStickMapped: Bool { store.hasStickBindings(.right) }
@@ -29,7 +30,7 @@ struct SettingsView: View {
         TabView(selection: $selection) {
             controlsTab
                 .tabItem {
-                    Label("Controls", systemImage: "gamecontroller")
+                    Label("General", systemImage: "gearshape")
                 }
                 .tag(SettingsTab.controls)
 
@@ -39,24 +40,13 @@ struct SettingsView: View {
                 }
                 .tag(SettingsTab.shortcuts)
 
-            advancedTab
-                .tabItem {
-                    Label("Advanced", systemImage: "slider.horizontal.3")
-                }
-                .tag(SettingsTab.advanced)
+//            advancedTab
+//                .tabItem {
+//                    Label("Advanced", systemImage: "slider.horizontal.3")
+//                }
+//                .tag(SettingsTab.advanced)
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                if selection == .shortcuts {
-                    Button {
-                        isCapturingButton = true
-                    } label: {
-                        Label("Add Input", systemImage: "plus")
-                    }
-                    .disabled(isCapturingButton)
-                }
-            }
-        }
+        .tabViewStyle(.automatic)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ControllerButtonDetected"))) { note in
             guard isCapturingButton,
                   let name = note.userInfo?["name"] as? String,
@@ -74,10 +64,27 @@ struct SettingsView: View {
     private var controlsTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsHeader(title: "Controls", subtitle: "Precision adjustments for pointer and scrolling")
+                SettingsCard3 {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(nsImage: NSApp.applicationIconImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 28, height: 28)
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
-                SettingsCard(title: "Status", subtitle: "Quick access to the essentials") {
-                    Toggle("Enabled", isOn: $settings.enabled)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Mouse Controller")
+                                .font(.headline)
+                        }
+
+                        Spacer()
+                        
+                        Toggle(isOn: $settings.enabled) {
+                            EmptyView()
+                        }
+                        .toggleStyle(.switch)
+                        .accessibilityLabel("Enable Mouse Controller")
+                    }
                     Divider()
                     LabeledContent("Controller") {
                         Text(mouseService.controllerName.capitalized)
@@ -85,7 +92,7 @@ struct SettingsView: View {
                     }
                 }
 
-                SettingsCard(title: "Pointer", subtitle: "Movement, acceleration, and inversion") {
+                SettingsCard(title: "Pointer") {
                     SettingSlider(title: "Cursor speed", value: $settings.cursorSpeed, range: 2...40, step: 1, valueText: "\(Int(settings.cursorSpeed))")
                         .disabled(leftStickMapped)
                     SettingSlider(title: "Pointer acceleration", value: $settings.pointerAcceleration, range: 0.1...3.0, step: 0.1, valueText: String(format: "%.1fx", settings.pointerAcceleration))
@@ -101,7 +108,7 @@ struct SettingsView: View {
                     }
                 }
 
-                SettingsCard(title: "Scrolling", subtitle: "Comfortable and consistent scrolling") {
+                SettingsCard(title: "Scrolling") {
                     SettingSlider(title: "Scroll speed", value: $settings.scrollSpeed, range: 2...60, step: 1, valueText: "\(Int(settings.scrollSpeed))")
                         .disabled(rightStickMapped)
                     Toggle("Horizontal scroll", isOn: $settings.horizontalScrollEnabled)
@@ -122,41 +129,73 @@ struct SettingsView: View {
     private var shortcutsTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsHeader(title: "Shortcuts", subtitle: "Map controller inputs to keyboard or mouse actions")
-
-                SettingsCard(title: "Record inputs", subtitle: "Press a button or tilt a stick to add it") {
-                    if isCapturingButton {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                            Text("Listening for controller input…")
-                            Spacer()
-                            Button("Cancel") { isCapturingButton = false }
-                        }
-                    } else {
-                        Text("Click \"Add Input\" in the toolbar, then press a button or move a stick to add it here.")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                SettingsCard(title: "Bindings", subtitle: "Assign shortcuts to each controller input") {
+                SettingsCard2 {
                     let buttons = store.bindings.keys.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-                    if buttons.isEmpty {
-                        ContentUnavailableView("No inputs yet", systemImage: "gamecontroller", description: Text("Add a controller input to start assigning shortcuts."))
-                    } else {
                         LazyVStack(spacing: 12) {
-                            ForEach(buttons, id: \.self) { btn in
-                                ShortcutRow(button: btn)
-                                if btn != buttons.last { Divider() }
+                            if isCapturingButton {
+                                // Listening panel with Cancel action
+                                HStack(spacing: 12) {
+                                    ProgressView()
+                                    Text("Listening for controller input…")
+                                    Spacer()
+                                    Button("Cancel") {
+                                        isCapturingButton = false
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                                .padding(16)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            } else {
+                                // Add panel as a button
+                                HStack(spacing: 12) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 28, weight: .semibold))
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Add Shortcut")
+                                            .font(.headline)
+                                    }
+                                }
+                                .padding(16)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .onTapGesture { isCapturingButton = true }
+                                .glassEffect(
+                                    .regular,
+                                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                )
                             }
+                            
+                            Divider()
+                            if buttons.isEmpty {
+                                ContentUnavailableView("No inputs yet", systemImage: "gamecontroller", description: Text("Add a controller input to start assigning shortcuts."))
+                            } else {
+                            
+                                ForEach(buttons, id: \.self) { btn in
+                                    ShortcutRow(button: btn)
+                                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                }
+                                
+                                Button(role: .destructive) {
+                                    showDeleteAllConfirm = true
+                                } label: {
+                                    Label("Delete All Shortcuts", systemImage: "trash")
+                                }
+                                .buttonStyle(.glassProminent)
+                                .tint(.red.opacity(0.5))
+                                .confirmationDialog(
+                                    "Delete All Shortcuts?",
+                                    isPresented: $showDeleteAllConfirm,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Delete All Shortcuts", role: .destructive) {
+                                        store.reset()
+                                    }
+                                    Button("Cancel", role: .cancel) { }
+                                } message: {
+                                    Text("This will remove every configured shortcut. This action cannot be undone.")
+                                }
                         }
-                    }
-                }
-
-                SettingsCard(title: "Reset", subtitle: "Clear all shortcut assignments") {
-                    Button(role: .destructive) {
-                        store.reset()
-                    } label: {
-                        Label("Reset All Shortcuts", systemImage: "trash")
                     }
                 }
             }
@@ -169,7 +208,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsHeader(title: "Advanced", subtitle: "Experimental controls and fine-tuning")
 
-                SettingsCard(title: "Experimental", subtitle: "Teleport-style cursor movement within a radius") {
+                SettingsCard(title: "Experimental") {
                     Toggle("Enable experimental cursor mode", isOn: $settings.experimentalTeleportEnabled)
                     SettingSlider(title: "Teleport radius", value: $settings.experimentalTeleportRadius, range: 80...800, step: 10, valueText: "\(Int(settings.experimentalTeleportRadius)) px")
                         .disabled(!settings.experimentalTeleportEnabled)
@@ -200,7 +239,6 @@ private struct SettingsHeader: View {
 
 private struct SettingsCard<Content: View>: View {
     let title: String
-    let subtitle: String
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -208,15 +246,42 @@ private struct SettingsCard<Content: View>: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.title3.bold())
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             }
             content
         }
-        .padding(20)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassEffect(
+            .regular,
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+        )
+    }
+}
+
+private struct SettingsCard2<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct SettingsCard3<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            content
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(
+            .regular,
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+        )
     }
 }
 
@@ -283,12 +348,11 @@ struct ShortcutRow: View {
                     Text("Remove from List")
                 }
             } label: {
-                Image(systemName: "ellipsis.circle")
+                Image(systemName: "ellipsis")
                     .font(.title3)
             }
         }
         .padding(12)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private var currentActionDescription: String {

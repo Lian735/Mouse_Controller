@@ -212,7 +212,43 @@ final class ControllerMouseService: ObservableObject {
             let radius = CGFloat(settings.experimentalTeleportRadius)
             let target = CGPoint(x: center.x + CGFloat(x) * radius,
                                  y: center.y - CGFloat(y) * radius)
-            MouseEvents.moveTo(target)
+
+            // Bounce animation toward target with slight overshoot
+            // Parameters can be tuned via AppSettings in the future
+            let totalSteps = 8
+            let stepInterval: TimeInterval = 1.0 / 480.0 // ~16.6ms over ~133ms total
+            let overshoot: CGFloat = 1.12 // 12% overshoot for a subtle bounce
+
+            let start = MouseEvents.location()
+            let to = target
+
+            // Precompute a spring-like easing (easeOutBack style)
+            func easeOutBack(_ t: CGFloat) -> CGFloat {
+                // s ~= 1.70158 (back overshoot constant)
+                let s: CGFloat = 1.70158
+                let inv = t - 1
+                return 1 + (inv * inv) * ((s + 1) * inv + s)
+            }
+
+            // Schedule incremental moves on the main runloop to avoid blocking
+            for i in 1...totalSteps {
+                let when = DispatchTime.now() + stepInterval * Double(i)
+                DispatchQueue.main.asyncAfter(deadline: when) {
+                    let p = CGFloat(i) / CGFloat(totalSteps)
+                    // Compose overshoot by extending the end point once near completion
+                    let eased = easeOutBack(p)
+                    let currentTarget = CGPoint(
+                        x: start.x + (to.x - start.x) * eased * overshoot,
+                        y: start.y + (to.y - start.y) * eased * overshoot
+                    )
+                    MouseEvents.moveTo(currentTarget)
+
+                    // Final settle exactly at `to` on last step
+                    if i == totalSteps {
+                        MouseEvents.moveTo(to)
+                    }
+                }
+            }
         }
 
         lastLeftMagnitude = magnitude
@@ -276,3 +312,4 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 }
+
