@@ -19,7 +19,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Accessibility.requestPromptIfNeeded()
         ControllerMouseService.shared.start()
-        GameModeMonitor.shared.start()
         _ = ControllerInputManager.shared
     }
 
@@ -67,3 +66,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 }
+
