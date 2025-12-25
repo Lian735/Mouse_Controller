@@ -279,101 +279,52 @@ enum ShortcutPerformer {
     }
 
     private static func performKeyboard(_ ks: KeyboardShortcut) {
-        keyDown(ks)
-        keyUp(ks)
-    }
-
-    static func keyDown(_ ks: KeyboardShortcut) {
         guard let src = CGEventSource(stateID: .hidSystemState) else {
             #if DEBUG
             print("Failed to create CGEventSource; check Accessibility permissions.")
             #endif
             return
         }
-
-        let modifiers = filteredModifiers(from: ks.modifiers)
-        if !isModifierKey(ks.keyCode) {
-            pressModifiers(modifiers, source: src)
+        // Press modifiers
+        let mods: [(CGEventFlags, CGKeyCode)] = [
+            (.maskCommand, 0x37), // Command
+            (.maskShift,   0x38), // Shift
+            (.maskAlternate, 0x3A), // Option
+            (.maskControl, 0x3B) // Control
+        ]
+        for (flag, code) in mods where ks.modifiers.contains(flag) {
+            if let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true) { e.flags = flag; e.post(tap: .cghidEventTap) }
+            else {
+                #if DEBUG
+                print("Failed to create key down for modifier: \(flag)")
+                #endif
+            }
         }
-
+        // Key down/up
         if let down = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: true) {
-            down.flags = modifiers
+            down.flags = ks.modifiers
             down.post(tap: .cghidEventTap)
         } else {
             #if DEBUG
             print("Failed to create key down for keyCode: \(ks.keyCode)")
             #endif
         }
-    }
-
-    static func keyUp(_ ks: KeyboardShortcut) {
-        guard let src = CGEventSource(stateID: .hidSystemState) else {
-            #if DEBUG
-            print("Failed to create CGEventSource; check Accessibility permissions.")
-            #endif
-            return
-        }
-
-        let modifiers = filteredModifiers(from: ks.modifiers)
         if let up = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: false) {
-            up.flags = modifiers
+            up.flags = ks.modifiers
             up.post(tap: .cghidEventTap)
         } else {
             #if DEBUG
             print("Failed to create key up for keyCode: \(ks.keyCode)")
             #endif
         }
-
-        if !isModifierKey(ks.keyCode) {
-            releaseModifiers(modifiers, source: src)
-        }
-    }
-
-    private static func pressModifiers(_ modifiers: CGEventFlags, source: CGEventSource) {
-        for (flag, code) in modifierKeyCodes() where modifiers.contains(flag) {
-            if let e = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true) {
-                e.flags = flag
-                e.post(tap: .cghidEventTap)
-            } else {
-                #if DEBUG
-                print("Failed to create key down for modifier: \(flag)")
-                #endif
-            }
-        }
-    }
-
-    private static func releaseModifiers(_ modifiers: CGEventFlags, source: CGEventSource) {
-        for (flag, code) in modifierKeyCodes().reversed() where modifiers.contains(flag) {
-            if let e = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) {
-                e.flags = flag
-                e.post(tap: .cghidEventTap)
-            } else {
+        // Release modifiers
+        for (flag, code) in mods.reversed() where ks.modifiers.contains(flag) {
+            if let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false) { e.flags = flag; e.post(tap: .cghidEventTap) }
+            else {
                 #if DEBUG
                 print("Failed to create key up for modifier: \(flag)")
                 #endif
             }
-        }
-    }
-
-    private static func filteredModifiers(from flags: CGEventFlags) -> CGEventFlags {
-        flags.intersection([.maskCommand, .maskShift, .maskAlternate, .maskControl])
-    }
-
-    private static func modifierKeyCodes() -> [(CGEventFlags, CGKeyCode)] {
-        [
-            (.maskCommand, 0x37), // Command (left)
-            (.maskShift, 0x38), // Shift (left)
-            (.maskAlternate, 0x3A), // Option (left)
-            (.maskControl, 0x3B) // Control (left)
-        ]
-    }
-
-    private static func isModifierKey(_ keyCode: CGKeyCode) -> Bool {
-        switch keyCode {
-        case 0x37, 0x36, 0x38, 0x3C, 0x3A, 0x3D, 0x3B, 0x3E:
-            return true
-        default:
-            return false
         }
     }
 }
@@ -395,22 +346,6 @@ enum KeyCodeNames {
     static func name(for keyCode: CGKeyCode) -> String {
         // Minimal mapping; fall back to hex code
         switch keyCode {
-        case 0x36, 0x37: return "Command"
-        case 0x38, 0x3C: return "Shift"
-        case 0x3A, 0x3D: return "Option"
-        case 0x3B, 0x3E: return "Control"
-        case 0x7A: return "F1"
-        case 0x78: return "F2"
-        case 0x63: return "F3"
-        case 0x76: return "F4"
-        case 0x60: return "F5"
-        case 0x61: return "F6"
-        case 0x62: return "F7"
-        case 0x64: return "F8"
-        case 0x65: return "F9"
-        case 0x6D: return "F10"
-        case 0x67: return "F11"
-        case 0x6F: return "F12"
         case 0x08: return "C"
         case 0x00: return "A"
         case 0x0B: return "B"
