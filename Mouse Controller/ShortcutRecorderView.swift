@@ -28,7 +28,7 @@ struct ShortcutRecorderView: View {
     private func startCapture() {
         modifiers = []
         recordingState.isRecording = true
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown]) { event in
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown, .keyUp, .leftMouseDown, .rightMouseDown, .otherMouseDown]) { event in
             if event.type == .flagsChanged {
                 modifiers = event.cgEvent?.flags ?? []
                 return nil
@@ -37,6 +37,9 @@ struct ShortcutRecorderView: View {
                 let keyCode = cg.getIntegerValueField(.keyboardEventKeycode)
                 recorded = .keyboard(KeyboardShortcut(keyCode: CGKeyCode(keyCode), modifiers: modifiers))
                 isRecording = false
+                return nil
+            }
+            if event.type == .keyUp {
                 return nil
             }
             if event.type == .leftMouseDown { recorded = .mouse(.left); isRecording = false; return nil }

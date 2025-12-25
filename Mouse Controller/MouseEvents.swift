@@ -49,6 +49,12 @@ enum MouseEvents {
         p.x += dx
         p.y -= dy
 
+        moveTo(p)
+    }
+
+    static func moveTo(_ point: CGPoint) {
+        var p = point
+
         let b = desktopBounds()
         p.x = min(max(p.x, b.minX), b.maxX)
         p.y = min(max(p.y, b.minY), b.maxY)
