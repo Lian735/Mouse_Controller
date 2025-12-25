@@ -83,9 +83,7 @@ struct SettingsView: View {
                   let name = note.userInfo?["name"] as? String,
                   !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
             let btn = ControllerButton(name)
-            if store.shortcut(for: btn) == nil {
-                store.set(nil, for: btn)
-            }
+            store.ensureButton(btn)
             isCapturingButton = false
         }
     }
