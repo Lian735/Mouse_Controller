@@ -27,6 +27,9 @@ final class ControllerMouseService: ObservableObject {
     private var rx: Float = 0
     private var lastLeftDirection: JoystickDirection?
     private var lastRightDirection: JoystickDirection?
+    private var experimentalCenter: CGPoint?
+    private var lastLeftMagnitude: Float = 0
+    private var lastLeftUpdate: TimeInterval = 0
 
     func start() {
         if #available(macOS 10.15, *) {
@@ -95,14 +98,19 @@ final class ControllerMouseService: ObservableObject {
         let leftStickMapped = ShortcutStore.shared.hasStickBindings(.left)
         let rightStickMapped = ShortcutStore.shared.hasStickBindings(.right)
 
-        var dx = leftStickMapped ? 0 : applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-        var dy = leftStickMapped ? 0 : applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+        if s.experimentalTeleportEnabled, !leftStickMapped {
+            updateExperimentalPointer(settings: s)
+        } else {
+            experimentalCenter = nil
+            var dx = leftStickMapped ? 0 : applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+            var dy = leftStickMapped ? 0 : applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
 
-        if s.invertY { dy = -dy }
-        if s.invertX { dx = -dx }
+            if s.invertY { dy = -dy }
+            if s.invertX { dx = -dx }
 
-        if dx != 0 || dy != 0 {
-            MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
+            if dx != 0 || dy != 0 {
+                MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
+            }
         }
 
         let rawScrollY = rightStickMapped ? 0 : applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
@@ -179,6 +187,36 @@ final class ControllerMouseService: ObservableObject {
 
     private func applyDeadzone(_ v: Float, dz: Float) -> Float {
         abs(v) < dz ? 0 : v
+    }
+
+    private func updateExperimentalPointer(settings: AppSettings) {
+        let now = CFAbsoluteTimeGetCurrent()
+        let dz = Float(settings.deadzone)
+        var x = applyDeadzone(lx, dz: dz)
+        var y = applyDeadzone(ly, dz: dz)
+
+        if settings.invertX { x = -x }
+        if settings.invertY { y = -y }
+
+        let magnitude = hypot(x, y)
+        let timeDelta = lastLeftUpdate == 0 ? 0 : now - lastLeftUpdate
+        let quickRelease = magnitude == 0 && lastLeftMagnitude > 0.35 && timeDelta < 0.08
+
+        if experimentalCenter == nil {
+            experimentalCenter = MouseEvents.location()
+        } else if quickRelease {
+            experimentalCenter = MouseEvents.location()
+        }
+
+        if let center = experimentalCenter {
+            let radius = CGFloat(settings.experimentalTeleportRadius)
+            let target = CGPoint(x: center.x + CGFloat(x) * radius,
+                                 y: center.y - CGFloat(y) * radius)
+            MouseEvents.moveTo(target)
+        }
+
+        lastLeftMagnitude = magnitude
+        lastLeftUpdate = now
     }
 
     private func bindButton(_ input: GCControllerButtonInput?, name: String) {
