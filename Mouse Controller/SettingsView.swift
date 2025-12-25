@@ -10,9 +10,9 @@ import Combine
 import Foundation
 
 private enum SettingsTab: Hashable {
+    case general
     case controls
     case shortcuts
-    case advanced
 }
 
 struct SettingsView: View {
@@ -20,13 +20,19 @@ struct SettingsView: View {
     @StateObject private var store = ShortcutStore.shared
     @StateObject private var mouseService = ControllerMouseService.shared
     @State private var isCapturingButton: Bool = false
-    @State private var selection: SettingsTab = .controls
+    @State private var selection: SettingsTab = .general
 
     private var leftStickMapped: Bool { store.hasStickBindings(.left) }
     private var rightStickMapped: Bool { store.hasStickBindings(.right) }
 
     var body: some View {
         TabView(selection: $selection) {
+            generalTab
+                .tabItem {
+                    Label("General", systemImage: "sparkles")
+                }
+                .tag(SettingsTab.general)
+
             controlsTab
                 .tabItem {
                     Label("Controls", systemImage: "gamecontroller")
@@ -38,13 +44,8 @@ struct SettingsView: View {
                     Label("Shortcuts", systemImage: "command")
                 }
                 .tag(SettingsTab.shortcuts)
-
-            advancedTab
-                .tabItem {
-                    Label("Advanced", systemImage: "slider.vertical.3")
-                }
-                .tag(SettingsTab.advanced)
         }
+        .tabViewStyle(.sidebarAdaptable)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 if selection == .shortcuts {
@@ -71,10 +72,10 @@ struct SettingsView: View {
         }
     }
 
-    private var controlsTab: some View {
+    private var generalTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsHeader(title: "Controls", subtitle: "Precision adjustments for pointer and scrolling")
+                SettingsHeader(title: "Mouse Controller", subtitle: "Fine-tune how your controller drives your cursor")
 
                 SettingsCard(title: "Status", subtitle: "Quick access to the essentials") {
                     Toggle("Enabled", isOn: $settings.enabled)
@@ -84,6 +85,31 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                SettingsCard(title: "Highlights", subtitle: "Your most-used settings") {
+                    SettingSlider(title: "Cursor speed", value: $settings.cursorSpeed, range: 2...40, step: 1, valueText: "\(Int(settings.cursorSpeed))")
+                        .disabled(leftStickMapped)
+                    if leftStickMapped {
+                        SettingsHint(text: "Left stick is assigned to shortcuts. Remove Joystick Left bindings to re-enable cursor controls.")
+                    }
+                    Divider()
+                    SettingSlider(title: "Scroll speed", value: $settings.scrollSpeed, range: 2...60, step: 1, valueText: "\(Int(settings.scrollSpeed))")
+                        .disabled(rightStickMapped)
+                    Toggle("Horizontal scroll", isOn: $settings.horizontalScrollEnabled)
+                        .disabled(rightStickMapped)
+                    if rightStickMapped {
+                        SettingsHint(text: "Right stick is assigned to shortcuts. Remove Joystick Right bindings to re-enable scrolling.")
+                    }
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    private var controlsTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                SettingsHeader(title: "Controls", subtitle: "Precision adjustments for pointer and scrolling")
 
                 SettingsCard(title: "Pointer", subtitle: "Movement, acceleration, and inversion") {
                     SettingSlider(title: "Cursor speed", value: $settings.cursorSpeed, range: 2...40, step: 1, valueText: "\(Int(settings.cursorSpeed))")
@@ -157,27 +183,6 @@ struct SettingsView: View {
                         store.reset()
                     } label: {
                         Label("Reset All Shortcuts", systemImage: "trash")
-                    }
-                }
-            }
-            .padding(24)
-        }
-    }
-
-    private var advancedTab: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                SettingsHeader(title: "Advanced", subtitle: "Experimental behaviors and fine-grained controls")
-
-                SettingsCard(title: "Experimental cursor teleport", subtitle: "Map the stick to a radius around the current cursor") {
-                    Toggle("Enable teleport mode", isOn: $settings.experimentalTeleportEnabled)
-                        .disabled(leftStickMapped)
-                    SettingSlider(title: "Teleport radius", value: $settings.experimentalTeleportRadius, range: 120...900, step: 10, valueText: "\(Int(settings.experimentalTeleportRadius)) px")
-                        .disabled(leftStickMapped || !settings.experimentalTeleportEnabled)
-                    if leftStickMapped {
-                        SettingsHint(text: "Left stick shortcuts are active. Remove Joystick Left bindings to enable teleport movement.")
-                    } else {
-                        SettingsHint(text: "Quickly releasing the stick recenters the radius on the current cursor. Slow returns pull the cursor back.")
                     }
                 }
             }

@@ -24,8 +24,6 @@ final class AppSettings: ObservableObject {
     @Published var invertY: Bool = false { didSet { save() } }
     @Published var invertX: Bool = false { didSet { save() } }
     @Published var horizontalScrollEnabled: Bool = true { didSet { save() } }
-    @Published var experimentalTeleportEnabled: Bool = false { didSet { save() } }
-    @Published var experimentalTeleportRadius: Double = 320 { didSet { save() } }
 
     private let d = UserDefaults.standard
     private let k = "ControllerMouseSettings"
@@ -42,8 +40,6 @@ final class AppSettings: ObservableObject {
         invertY = obj["invertY"] as? Bool ?? invertY
         invertX = obj["invertX"] as? Bool ?? invertX
         horizontalScrollEnabled = obj["horizontalScrollEnabled"] as? Bool ?? horizontalScrollEnabled
-        experimentalTeleportEnabled = obj["experimentalTeleportEnabled"] as? Bool ?? experimentalTeleportEnabled
-        experimentalTeleportRadius = obj["experimentalTeleportRadius"] as? Double ?? experimentalTeleportRadius
     }
 
     private func save() {
@@ -57,9 +53,7 @@ final class AppSettings: ObservableObject {
             "deadzone": deadzone,
             "invertY": invertY,
             "invertX": invertX,
-            "horizontalScrollEnabled": horizontalScrollEnabled,
-            "experimentalTeleportEnabled": experimentalTeleportEnabled,
-            "experimentalTeleportRadius": experimentalTeleportRadius
+            "horizontalScrollEnabled": horizontalScrollEnabled
         ], forKey: k)
     }
 }

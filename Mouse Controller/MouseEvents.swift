@@ -73,32 +73,6 @@ enum MouseEvents {
         e.post(tap: .cghidEventTap)
     }
 
-    static func moveTo(_ point: CGPoint) {
-        var p = point
-        let b = desktopBounds()
-        p.x = min(max(p.x, b.minX), b.maxX)
-        p.y = min(max(p.y, b.minY), b.maxY)
-
-        let type: CGEventType
-        let button: CGMouseButton
-        if isLeftDown {
-            type = .leftMouseDragged
-            button = .left
-        } else if isRightDown {
-            type = .rightMouseDragged
-            button = .right
-        } else if isMiddleDown {
-            type = .otherMouseDragged
-            button = .center
-        } else {
-            type = .mouseMoved
-            button = .left
-        }
-
-        guard let e = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: p, mouseButton: button) else { return }
-        e.post(tap: .cghidEventTap)
-    }
-
     static func leftDown() { isLeftDown = true; mouse(.leftMouseDown, .left) }
     static func leftUp()   { isLeftDown = false; mouse(.leftMouseUp, .left) }
     static func rightDown(){ isRightDown = true; mouse(.rightMouseDown, .right) }
