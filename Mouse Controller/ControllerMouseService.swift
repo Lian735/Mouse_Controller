@@ -75,10 +75,12 @@ final class ControllerMouseService: ObservableObject {
 
         gp.buttonA.pressedChangedHandler = { _, _, pressed in
             guard Accessibility.isTrusted else { return }
+            guard !ShortcutRecordingState.shared.isRecording else { return }
             pressed ? MouseEvents.leftDown() : MouseEvents.leftUp()
         }
         gp.buttonB.pressedChangedHandler = { _, _, pressed in
             guard Accessibility.isTrusted else { return }
+            guard !ShortcutRecordingState.shared.isRecording else { return }
             pressed ? MouseEvents.rightDown() : MouseEvents.rightUp()
         }
     }
@@ -118,4 +120,3 @@ final class ControllerMouseService: ObservableObject {
         abs(v) < dz ? 0 : v
     }
 }
-

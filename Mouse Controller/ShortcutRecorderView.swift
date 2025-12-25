@@ -6,6 +6,7 @@ struct ShortcutRecorderView: View {
     @State private var isRecording = false
     @State private var modifiers: CGEventFlags = []
     @State private var eventMonitor: Any?
+    @StateObject private var recordingState = ShortcutRecordingState.shared
 
     var body: some View {
         HStack {
@@ -26,6 +27,7 @@ struct ShortcutRecorderView: View {
 
     private func startCapture() {
         modifiers = []
+        recordingState.isRecording = true
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown]) { event in
             if event.type == .flagsChanged {
                 modifiers = event.cgEvent?.flags ?? []
@@ -49,5 +51,6 @@ struct ShortcutRecorderView: View {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
         }
+        recordingState.isRecording = false
     }
 }
