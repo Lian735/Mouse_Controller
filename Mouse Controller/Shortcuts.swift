@@ -1,5 +1,6 @@
 import Foundation
 import ApplicationServices
+import AppKit
 import Combine
 
 enum MouseButton: Int, Codable, CaseIterable, CustomStringConvertible {
@@ -15,26 +16,31 @@ enum MouseButton: Int, Codable, CaseIterable, CustomStringConvertible {
 struct KeyboardShortcut: Codable, Equatable {
     var keyCode: CGKeyCode
     var modifiers: CGEventFlags
+    var isSystemDefined: Bool
 
-    private enum CodingKeys: String, CodingKey { case keyCode, modifiers }
+    private enum CodingKeys: String, CodingKey { case keyCode, modifiers, isSystemDefined }
 
-    init(keyCode: CGKeyCode, modifiers: CGEventFlags) {
+    init(keyCode: CGKeyCode, modifiers: CGEventFlags, isSystemDefined: Bool = false) {
         self.keyCode = keyCode
         self.modifiers = modifiers
+        self.isSystemDefined = isSystemDefined
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let keyCodeRaw = try container.decode(UInt16.self, forKey: .keyCode)
         let modifiersRaw = try container.decode(UInt64.self, forKey: .modifiers)
+        let isSystemDefined = try container.decodeIfPresent(Bool.self, forKey: .isSystemDefined) ?? false
         self.keyCode = CGKeyCode(keyCodeRaw)
         self.modifiers = CGEventFlags(rawValue: modifiersRaw)
+        self.isSystemDefined = isSystemDefined
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(UInt16(keyCode), forKey: .keyCode)
         try container.encode(modifiers.rawValue, forKey: .modifiers)
+        try container.encode(isSystemDefined, forKey: .isSystemDefined)
     }
 }
 
@@ -242,7 +248,25 @@ enum ShortcutPerformer {
         case .mouse(let button):
             performMouse(button)
         case .keyboard(let ks):
-            performKeyboard(ks)
+            performKeyboardPress(ks)
+        }
+    }
+
+    static func keyDown(_ shortcut: Shortcut) {
+        switch shortcut {
+        case .mouse:
+            break
+        case .keyboard(let ks):
+            performKeyboardDown(ks)
+        }
+    }
+
+    static func keyUp(_ shortcut: Shortcut) {
+        switch shortcut {
+        case .mouse:
+            break
+        case .keyboard(let ks):
+            performKeyboardUp(ks)
         }
     }
 
@@ -278,11 +302,20 @@ enum ShortcutPerformer {
         }
     }
 
-    private static func performKeyboard(_ ks: KeyboardShortcut) {
+    private static func performKeyboardPress(_ ks: KeyboardShortcut) {
+        performKeyboardDown(ks)
+        performKeyboardUp(ks)
+    }
+
+    private static func performKeyboardDown(_ ks: KeyboardShortcut) {
         guard let src = CGEventSource(stateID: .hidSystemState) else {
             #if DEBUG
             print("Failed to create CGEventSource; check Accessibility permissions.")
             #endif
+            return
+        }
+        if ks.isSystemDefined {
+            performSystemDefined(keyCode: ks.keyCode, keyDown: true)
             return
         }
         // Press modifiers
@@ -300,7 +333,6 @@ enum ShortcutPerformer {
                 #endif
             }
         }
-        // Key down/up
         if let down = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: true) {
             down.flags = ks.modifiers
             down.post(tap: .cghidEventTap)
@@ -309,6 +341,25 @@ enum ShortcutPerformer {
             print("Failed to create key down for keyCode: \(ks.keyCode)")
             #endif
         }
+    }
+
+    private static func performKeyboardUp(_ ks: KeyboardShortcut) {
+        guard let src = CGEventSource(stateID: .hidSystemState) else {
+            #if DEBUG
+            print("Failed to create CGEventSource; check Accessibility permissions.")
+            #endif
+            return
+        }
+        if ks.isSystemDefined {
+            performSystemDefined(keyCode: ks.keyCode, keyDown: false)
+            return
+        }
+        let mods: [(CGEventFlags, CGKeyCode)] = [
+            (.maskCommand, 0x37), // Command
+            (.maskShift,   0x38), // Shift
+            (.maskAlternate, 0x3A), // Option
+            (.maskControl, 0x3B) // Control
+        ]
         if let up = CGEvent(keyboardEventSource: src, virtualKey: ks.keyCode, keyDown: false) {
             up.flags = ks.modifiers
             up.post(tap: .cghidEventTap)
@@ -325,6 +376,29 @@ enum ShortcutPerformer {
                 print("Failed to create key up for modifier: \(flag)")
                 #endif
             }
+        }
+    }
+
+    private static func performSystemDefined(keyCode: CGKeyCode, keyDown: Bool) {
+        let keyState = keyDown ? 0xA00 : 0xB00
+        let data1 = (Int(keyCode) << 16) | keyState
+        let data2 = -1
+        if let event = NSEvent.otherEvent(
+            with: .systemDefined,
+            location: .zero,
+            modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: 0,
+            context: nil,
+            subtype: 8,
+            data1: data1,
+            data2: data2
+        )?.cgEvent {
+            event.post(tap: .cghidEventTap)
+        } else {
+            #if DEBUG
+            print("Failed to create system defined event for keyCode: \(keyCode)")
+            #endif
         }
     }
 }
@@ -350,6 +424,10 @@ enum KeyCodeNames {
         case 0x00: return "A"
         case 0x0B: return "B"
         case 0x0C: return "="
+        case 0x37, 0x36: return "Command"
+        case 0x38, 0x3C: return "Shift"
+        case 0x3A, 0x3D: return "Option"
+        case 0x3B, 0x3E: return "Control"
         default: return String(format: "0x%02X", keyCode)
         }
     }
