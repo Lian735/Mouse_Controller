@@ -1,11 +1,9 @@
 import SwiftUI
-import ApplicationServices
 
 struct ShortcutRecorderView: View {
     @Binding var recorded: Shortcut?
     @State private var isRecording = false
-    @State private var modifiers: CGEventFlags = []
-    @State private var eventMonitor: Any?
+    @State private var recorder = ShortcutEventTapRecorder()
     @StateObject private var recordingState = ShortcutRecordingState.shared
 
     var body: some View {
@@ -28,34 +26,21 @@ struct ShortcutRecorderView: View {
     }
 
     private func startCapture() {
-        modifiers = []
         recordingState.isRecording = true
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown, .keyUp, .leftMouseDown, .rightMouseDown, .otherMouseDown]) { event in
-            if event.type == .flagsChanged {
-                modifiers = event.cgEvent?.flags ?? []
-                return nil
+        recorder.onCapture = { capture in
+            switch capture {
+            case .keyboard(let shortcut):
+                recorded = .keyboard(shortcut)
+            case .mouse(let button):
+                recorded = .mouse(button)
             }
-            if event.type == .keyDown, let cg = event.cgEvent {
-                let keyCode = cg.getIntegerValueField(.keyboardEventKeycode)
-                recorded = .keyboard(KeyboardShortcut(keyCode: CGKeyCode(keyCode), modifiers: modifiers))
-                isRecording = false
-                return nil
-            }
-            if event.type == .keyUp {
-                return nil
-            }
-            if event.type == .leftMouseDown { recorded = .mouse(.left); isRecording = false; return nil }
-            if event.type == .rightMouseDown { recorded = .mouse(.right); isRecording = false; return nil }
-            if event.type == .otherMouseDown { recorded = .mouse(.middle); isRecording = false; return nil }
-            return event
+            isRecording = false
         }
+        recorder.start()
     }
 
     private func stopCapture() {
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
-        }
+        recorder.stop()
         recordingState.isRecording = false
     }
 }
