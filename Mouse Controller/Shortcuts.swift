@@ -96,14 +96,6 @@ final class ShortcutStore: ObservableObject {
     }
 }
 
-@MainActor
-final class ShortcutRecordingState: ObservableObject {
-    static let shared = ShortcutRecordingState()
-    private init() {}
-
-    @Published var isRecording: Bool = false
-}
-
 enum ShortcutPerformer {
     static func perform(_ shortcut: Shortcut) {
         #if DEBUG
@@ -225,3 +217,4 @@ enum KeyCodeNames {
         }
     }
 }
+
