@@ -25,6 +25,8 @@ final class ControllerMouseService: ObservableObject {
     private var ly: Float = 0
     private var ry: Float = 0
     private var rx: Float = 0
+    private var lastLeftDirection: JoystickDirection?
+    private var lastRightDirection: JoystickDirection?
 
     func start() {
         if #available(macOS 10.15, *) {
@@ -80,6 +82,8 @@ final class ControllerMouseService: ObservableObject {
         controller = nil
         controllerName = "none"
         lx = 0; ly = 0; rx = 0; ry = 0
+        lastLeftDirection = nil
+        lastRightDirection = nil
     }
 
     private func tick() {
@@ -88,8 +92,11 @@ final class ControllerMouseService: ObservableObject {
         guard Accessibility.isTrusted else { return }
 
         let accel = Float(s.pointerAcceleration)
-        var dx = applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-        var dy = applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+        let leftStickMapped = ShortcutStore.shared.hasStickBindings(.left)
+        let rightStickMapped = ShortcutStore.shared.hasStickBindings(.right)
+
+        var dx = leftStickMapped ? 0 : applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+        var dy = leftStickMapped ? 0 : applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
 
         if s.invertY { dy = -dy }
         if s.invertX { dx = -dx }
@@ -98,8 +105,8 @@ final class ControllerMouseService: ObservableObject {
             MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
         }
 
-        let rawScrollY = applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
-        let rawScrollX = applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        let rawScrollY = rightStickMapped ? 0 : applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
+        let rawScrollX = rightStickMapped ? 0 : applyDeadzone(rx, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
         var scrollY = rawScrollY
         if s.invertScrollY { scrollY = -scrollY }
         var scrollX = s.horizontalScrollEnabled ? rawScrollX : 0
@@ -111,11 +118,14 @@ final class ControllerMouseService: ObservableObject {
 
     private func wireExtendedGamepad(_ gp: GCExtendedGamepad) {
         gp.leftThumbstick.valueChangedHandler = { [weak self] _, x, y in
-            self?.lx = x; self?.ly = y
+            self?.lx = x
+            self?.ly = y
+            self?.handleJoystickDirection(stick: .left, x: x, y: y)
         }
         gp.rightThumbstick.valueChangedHandler = { [weak self] _, x, y in
             self?.rx = x
             self?.ry = y
+            self?.handleJoystickDirection(stick: .right, x: x, y: y)
         }
 
         bindButton(gp.buttonA, name: "ButtonA")
@@ -201,6 +211,30 @@ final class ControllerMouseService: ObservableObject {
             pressed ? MouseEvents.rightDown() : MouseEvents.rightUp()
         case .middle:
             pressed ? MouseEvents.middleDown() : MouseEvents.middleUp()
+        }
+    }
+
+    private func handleJoystickDirection(stick: JoystickStick, x: Float, y: Float) {
+        guard Accessibility.isTrusted else { return }
+        guard !ShortcutRecordingState.shared.isRecording else { return }
+        let direction = JoystickBinding.direction(forX: x, y: y)
+        let lastDirection = stick == .left ? lastLeftDirection : lastRightDirection
+        guard direction != lastDirection else { return }
+
+        if let lastDirection {
+            let name = JoystickBinding.buttonName(for: stick, direction: lastDirection)
+            handleButtonPress(name: name, pressed: false)
+        }
+
+        if let direction {
+            let name = JoystickBinding.buttonName(for: stick, direction: direction)
+            handleButtonPress(name: name, pressed: true)
+        }
+
+        if stick == .left {
+            lastLeftDirection = direction
+        } else {
+            lastRightDirection = direction
         }
     }
 }

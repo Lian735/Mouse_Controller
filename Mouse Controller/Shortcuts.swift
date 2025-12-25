@@ -60,6 +60,77 @@ struct ControllerButton: Hashable, Codable, CustomStringConvertible {
     var description: String { name }
 }
 
+enum JoystickStick: String, CaseIterable {
+    case left
+    case right
+}
+
+enum JoystickDirection: String, CaseIterable {
+    case up
+    case down
+    case left
+    case right
+}
+
+enum JoystickBinding {
+    static let activationThreshold: Float = 0.7
+
+    static func buttonName(for stick: JoystickStick, direction: JoystickDirection) -> String {
+        "Joystick\(stick.rawValue.capitalized)\(direction.rawValue.capitalized)"
+    }
+
+    static func button(for stick: JoystickStick, direction: JoystickDirection) -> ControllerButton {
+        ControllerButton(buttonName(for: stick, direction: direction))
+    }
+
+    static func buttons(for stick: JoystickStick) -> [ControllerButton] {
+        JoystickDirection.allCases.map { button(for: stick, direction: $0) }
+    }
+
+    static func stick(for name: String) -> JoystickStick? {
+        if name.hasPrefix("JoystickLeft") { return .left }
+        if name.hasPrefix("JoystickRight") { return .right }
+        return nil
+    }
+
+    static func direction(for name: String) -> JoystickDirection? {
+        if name.hasSuffix("Up") { return .up }
+        if name.hasSuffix("Down") { return .down }
+        if name.hasSuffix("Left") { return .left }
+        if name.hasSuffix("Right") { return .right }
+        return nil
+    }
+
+    static func direction(forX x: Float, y: Float, threshold: Float = activationThreshold) -> JoystickDirection? {
+        let maxAxis = max(abs(x), abs(y))
+        guard maxAxis >= threshold else { return nil }
+        if abs(x) > abs(y) {
+            return x > 0 ? .right : .left
+        }
+        return y > 0 ? .up : .down
+    }
+}
+
+extension ControllerButton {
+    var displayName: String {
+        if let stick = JoystickBinding.stick(for: name),
+           let direction = JoystickBinding.direction(for: name) {
+            return "Joystick \(stick.rawValue.capitalized) \(direction.rawValue.capitalized)"
+        }
+        if name.hasPrefix("DPad") {
+            let suffix = name.replacingOccurrences(of: "DPad", with: "")
+            return "D-Pad \(suffix)"
+        }
+        if name == "L1" { return "L1 (Left Shoulder)" }
+        if name == "R1" { return "R1 (Right Shoulder)" }
+        if name == "L2" { return "L2 (Left Trigger)" }
+        if name == "R2" { return "R2 (Right Trigger)" }
+        if name == "L3" { return "L3 (Left Stick)" }
+        if name == "R3" { return "R3 (Right Stick)" }
+        return name
+    }
+}
+
 @MainActor
 final class ShortcutStore: ObservableObject {
     static let shared = ShortcutStore()
@@ -118,6 +189,28 @@ final class ShortcutStore: ObservableObject {
         if bindings[button] == nil {
             bindings[button] = .some(nil)
         }
+    }
+
+    func ensureButtons(_ buttons: [ControllerButton]) {
+        for button in buttons {
+            ensureButton(button)
+        }
+    }
+
+    func hasStickBindings(_ stick: JoystickStick) -> Bool {
+        bindings.keys.contains { JoystickBinding.stick(for: $0.name) == stick }
+    }
+
+    func removeStickBindings(for button: ControllerButton) {
+        guard let stick = JoystickBinding.stick(for: button.name) else { return }
+        let buttons = JoystickBinding.buttons(for: stick)
+        for stickButton in buttons {
+            bindings.removeValue(forKey: stickButton)
+        }
+    }
+
+    func removeButton(_ button: ControllerButton) {
+        bindings.removeValue(forKey: button)
     }
 }
 
