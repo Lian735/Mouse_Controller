@@ -140,12 +140,16 @@ final class ControllerMouseService: ObservableObject {
     }
 
     private func wireExtendedGamepad(_ gp: GCExtendedGamepad) {
-        gp.leftThumbstick.valueChangedHandler = { [weak self] _, x, y in
+        let existingLeftHandler = gp.leftThumbstick.valueChangedHandler
+        gp.leftThumbstick.valueChangedHandler = { [weak self] stick, x, y in
+            existingLeftHandler?(stick, x, y)
             self?.lx = x
             self?.ly = y
             self?.handleJoystickDirection(stick: .left, x: x, y: y)
         }
-        gp.rightThumbstick.valueChangedHandler = { [weak self] _, x, y in
+        let existingRightHandler = gp.rightThumbstick.valueChangedHandler
+        gp.rightThumbstick.valueChangedHandler = { [weak self] stick, x, y in
+            existingRightHandler?(stick, x, y)
             self?.rx = x
             self?.ry = y
             self?.handleJoystickDirection(stick: .right, x: x, y: y)
@@ -328,4 +332,3 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 }
-

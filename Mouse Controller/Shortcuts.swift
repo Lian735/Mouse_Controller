@@ -199,6 +199,7 @@ final class ShortcutStore: ObservableObject {
         } else if bindings.isEmpty {
             bindings = Self.defaultBindings
         }
+        ensureDefaultBindings()
         loadVibration()
     }
 
@@ -260,6 +261,12 @@ final class ShortcutStore: ObservableObject {
         bindings.removeAll()
         d.removeObject(forKey: k)
         objectWillChange.send()
+    }
+
+    private func ensureDefaultBindings() {
+        for (button, shortcut) in Self.defaultBindings where bindings[button] == nil {
+            bindings[button] = shortcut
+        }
     }
 
     func ensureButton(_ button: ControllerButton) {
