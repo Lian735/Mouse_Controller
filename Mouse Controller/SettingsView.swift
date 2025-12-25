@@ -343,11 +343,12 @@ struct ShortcutRow: View {
             ShortcutRecorderView(recorded: Binding(
                 get: { tempShortcut ?? store.shortcut(for: button) },
                 set: { newValue in
-                    updateShortcut(newValue)
+                    tempShortcut = newValue
+                    store.set(newValue, for: button)
                 })
             )
             Menu {
-                Button("Clear") { clearShortcut() }
+                Button("Clear") { store.set(nil, for: button) }
                 Button("Reset to Default") { resetToDefault() }
                 Divider()
                 Button(role: .destructive) {
@@ -371,7 +372,7 @@ struct ShortcutRow: View {
     }
 
     private func resetToDefault() {
-        clearShortcut()
+        store.set(nil, for: button)
     }
 
     private func removeButton() {
@@ -379,19 +380,6 @@ struct ShortcutRow: View {
             store.removeStickBindings(for: button)
         } else {
             store.removeButton(button)
-        }
-    }
-
-    private func clearShortcut() {
-        updateShortcut(nil)
-    }
-
-    private func updateShortcut(_ newValue: Shortcut?) {
-        tempShortcut = newValue
-        if newValue == nil, JoystickBinding.stick(for: button.name) != nil {
-            store.removeStickBindings(for: button)
-        } else {
-            store.set(newValue, for: button)
         }
     }
 }
