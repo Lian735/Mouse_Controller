@@ -27,8 +27,6 @@ final class ControllerMouseService: ObservableObject {
     private var rx: Float = 0
     private var lastLeftDirection: JoystickDirection?
     private var lastRightDirection: JoystickDirection?
-    private var teleportCenter: CGPoint?
-    private var lastTeleportMagnitude: Float = 0
 
     func start() {
         if #available(macOS 10.15, *) {
@@ -96,22 +94,15 @@ final class ControllerMouseService: ObservableObject {
         let accel = Float(s.pointerAcceleration)
         let leftStickMapped = ShortcutStore.shared.hasStickBindings(.left)
         let rightStickMapped = ShortcutStore.shared.hasStickBindings(.right)
-        let useTeleport = s.experimentalTeleportEnabled && !leftStickMapped
 
-        if useTeleport {
-            handleTeleportMovement(settings: s)
-        } else {
-            teleportCenter = nil
-            lastTeleportMagnitude = 0
-            var dx = leftStickMapped ? 0 : applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
-            var dy = leftStickMapped ? 0 : applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+        var dx = leftStickMapped ? 0 : applyDeadzone(lx, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
+        var dy = leftStickMapped ? 0 : applyDeadzone(ly, dz: Float(s.deadzone)) * Float(s.cursorSpeed) * accel
 
-            if s.invertY { dy = -dy }
-            if s.invertX { dx = -dx }
+        if s.invertY { dy = -dy }
+        if s.invertX { dx = -dx }
 
-            if dx != 0 || dy != 0 {
-                MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
-            }
+        if dx != 0 || dy != 0 {
+            MouseEvents.moveBy(dx: CGFloat(dx), dy: CGFloat(dy))
         }
 
         let rawScrollY = rightStickMapped ? 0 : applyDeadzone(ry, dz: Float(s.deadzone)) * Float(s.scrollSpeed)
@@ -188,43 +179,6 @@ final class ControllerMouseService: ObservableObject {
 
     private func applyDeadzone(_ v: Float, dz: Float) -> Float {
         abs(v) < dz ? 0 : v
-    }
-
-    private func handleTeleportMovement(settings: AppSettings) {
-        var x = applyDeadzone(lx, dz: Float(settings.deadzone))
-        var y = applyDeadzone(ly, dz: Float(settings.deadzone))
-        if settings.invertX { x = -x }
-        if settings.invertY { y = -y }
-
-        let magnitude = hypot(x, y)
-        let currentLocation = MouseEvents.location()
-
-        if teleportCenter == nil {
-            teleportCenter = currentLocation
-        }
-
-        if shouldSnapRelease(previous: lastTeleportMagnitude, current: magnitude, deadzone: Float(settings.deadzone)) {
-            teleportCenter = currentLocation
-        }
-
-        let center = teleportCenter ?? currentLocation
-        let radius = CGFloat(settings.experimentalTeleportRadius)
-        let target = CGPoint(
-            x: center.x + CGFloat(x) * radius,
-            y: center.y - CGFloat(y) * radius
-        )
-
-        if magnitude != 0 || lastTeleportMagnitude != 0 {
-            MouseEvents.moveTo(target)
-        }
-
-        lastTeleportMagnitude = magnitude
-    }
-
-    private func shouldSnapRelease(previous: Float, current: Float, deadzone: Float) -> Bool {
-        let releaseThreshold: Float = 0.55
-        let snapDrop: Float = 0.45
-        return previous > releaseThreshold && current <= deadzone && (previous - current) >= snapDrop
     }
 
     private func bindButton(_ input: GCControllerButtonInput?, name: String) {
