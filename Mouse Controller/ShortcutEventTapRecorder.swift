@@ -145,7 +145,9 @@ final class ShortcutEventTapRecorder {
         } else {
             pressedModifiers.remove(keyCode)
         }
-        pendingShortcut = KeyboardShortcut(keyCode: keyCode, modifiers: event.flags)
+        if !hasNonModifierPendingShortcut() {
+            pendingShortcut = KeyboardShortcut(keyCode: keyCode, modifiers: event.flags)
+        }
         finalizeIfIdle()
     }
 
@@ -175,6 +177,15 @@ final class ShortcutEventTapRecorder {
         DispatchQueue.main.async { [weak self] in
             self?.onCapture?(capture)
         }
+    }
+
+    private func hasNonModifierPendingShortcut() -> Bool {
+        guard let pendingShortcut else { return false }
+        if pendingShortcut.systemKey != nil { return true }
+        if let keyCode = pendingShortcut.keyCode {
+            return ModifierKeyMapping.flag(for: keyCode) == nil
+        }
+        return false
     }
 
     private func systemKeyInfo(from event: CGEvent) -> (key: Int32, isDown: Bool, isUp: Bool)? {
