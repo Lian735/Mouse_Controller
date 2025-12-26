@@ -52,9 +52,6 @@ struct SettingsView: View {
         .onChange(of: settings.enabled) { _, newValue in
             mouseService.setEnabled(newValue)
         }
-        .onChange(of: settings.autoDisableInGameMode) { _, _ in
-            mouseService.updateAutoDisablePreference()
-        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ControllerButtonDetected"))) { note in
             guard isCapturingButton,
                   let name = note.userInfo?["name"] as? String,
@@ -69,34 +66,49 @@ struct SettingsView: View {
         }
     }
 
+    private func stickDisplayName(_ stick: JoystickStick) -> String {
+        switch stick {
+        case .left: return "Left"
+        case .right: return "Right"
+        }
+    }
+
     private var controlsTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsCard3 {
-                    HStack(alignment: .center, spacing: 12) {
-                        Image(nsImage: NSApp.applicationIconImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 28, height: 28)
-                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Mouse Controller")
-                                .font(.headline)
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
+                            Image(nsImage: NSApp.applicationIconImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 28, height: 28)
+                                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Mouse Controller")
+                                    .font(.headline)
+                            }
+                            
+                            Spacer()
+                            
+                            Toggle(isOn: $settings.enabled) {
+                                EmptyView()
+                            }
+                            .toggleStyle(.switch)
+                            .accessibilityLabel("Enable Mouse Controller")
                         }
-
-                        Spacer()
-                        
-                        Toggle(isOn: $settings.enabled) {
-                            EmptyView()
-                        }
-                        .toggleStyle(.switch)
-                        .accessibilityLabel("Enable Mouse Controller")
+                        Text("⚠️ Mouse Controller is not yet optimized for playing games.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                     Divider()
-                    LabeledContent("Controller") {
-                        Text("\(mouseService.controllerName.capitalized) · \(mouseService.batteryDescription)")
+                    LabeledContent("Controller:") {
+                        Text("\(mouseService.controllerName.capitalized)")
                             .foregroundStyle(.secondary)
+                            .onTapGesture {
+                                mouseService.vibrateDoublePulse()
+                            }
                     }
                 }
 
@@ -112,7 +124,7 @@ struct SettingsView: View {
                     Toggle("Invert horizontal", isOn: $settings.invertX)
                         .disabled(pointerStickMapped)
                     if pointerStickMapped {
-                        SettingsHint(text: "\(pointerStick.displayName) stick shortcuts are active. Remove Joystick \(pointerStick.displayName) bindings to restore pointer controls.")
+                        SettingsHint(text: "\(stickDisplayName(pointerStick)) stick shortcuts are active. Remove Joystick \(stickDisplayName(pointerStick)) bindings to restore pointer controls.")
                     }
                 }
 
@@ -126,7 +138,7 @@ struct SettingsView: View {
                     Toggle("Invert horizontal scroll", isOn: $settings.invertScrollX)
                         .disabled(scrollStickMapped)
                     if scrollStickMapped {
-                        SettingsHint(text: "\(scrollStick.displayName) stick shortcuts are active. Remove Joystick \(scrollStick.displayName) bindings to restore scrolling.")
+                        SettingsHint(text: "\(stickDisplayName(scrollStick)) stick shortcuts are active. Remove Joystick \(stickDisplayName(scrollStick)) bindings to restore scrolling.")
                     }
                 }
 
@@ -138,18 +150,16 @@ struct SettingsView: View {
                 }
 
                 SettingsCard(title: "Behavior") {
-                    Toggle("Disable in Game Mode", isOn: $settings.autoDisableInGameMode)
-                    Text("Automatically disables Mouse Controller while Game Mode is detected.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+//                    Toggle("Disable in Game Mode", isOn: $settings.autoDisableInGameMode)
+//                    Text("Automatically disables Mouse Controller while Game Mode is detected.")
+//                        .font(.footnote)
+//                        .foregroundStyle(.secondary)
                     Toggle("Launch at login", isOn: $settings.launchAtLogin)
-                    Text("Start Mouse Controller automatically when you sign in to macOS.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    Text("Optimized for using macOS, not for games.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
+                Text("Made with ❤️ by Lian")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .modifier(ScrollTransitionModifier())
             }
             .padding(24)
         }
@@ -174,7 +184,8 @@ struct SettingsView: View {
                                 }
                                 .padding(16)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .modifier(ScrollTransitionModifier())
                             } else {
                                 // Add panel as a button
                                 HStack(spacing: 12) {
@@ -189,16 +200,26 @@ struct SettingsView: View {
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .onTapGesture {
-                                    mouseService.vibrateDoublePulse()
                                     isCapturingButton = true
+                                    Task {
+                                        mouseService.vibrateDoublePulse()
+                                        try? await Task.sleep(nanoseconds: 200_000_000)
+                                        mouseService.vibrateDoublePulse()
+                                    }
+                                }
+                                .background{
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .fill(Color.green.opacity(0.18))
                                 }
                                 .glassEffect(
-                                    .regular,
+                                    .clear,
                                     in: RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 )
+                                .modifier(ScrollTransitionModifier())
                             }
                             
                             Divider()
+                                .modifier(ScrollTransitionModifier())
                             if buttons.isEmpty {
                                 ContentUnavailableView("No inputs yet", systemImage: "gamecontroller", description: Text("Add a controller input to start assigning shortcuts."))
                             } else {
@@ -212,6 +233,7 @@ struct SettingsView: View {
                                 } label: {
                                     Label("Delete All Shortcuts", systemImage: "trash")
                                 }
+                                .modifier(ScrollTransitionModifier())
                                 .buttonStyle(.glassProminent)
                                 .tint(.red.opacity(0.5))
                                 .confirmationDialog(
@@ -283,9 +305,10 @@ private struct SettingsCard<Content: View>: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(
-            .regular,
+            .clear,
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
         )
+        .modifier(ScrollTransitionModifier())
     }
 }
 
@@ -310,9 +333,10 @@ private struct SettingsCard3<Content: View>: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(
-            .regular,
+            .clear,
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
         )
+        .modifier(ScrollTransitionModifier())
     }
 }
 
@@ -349,6 +373,7 @@ private struct SettingSlider: View {
 
 struct ShortcutRow: View {
     @StateObject private var store = ShortcutStore.shared
+    @StateObject private var mouseService = ControllerMouseService.shared
     let button: ControllerButton
     let isActive: Bool
     @State private var tempShortcut: Shortcut? = nil
@@ -387,7 +412,8 @@ struct ShortcutRow: View {
         .padding(12)
         .frame(maxWidth: .infinity)
         .background(activeBackground)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .modifier(ScrollTransitionModifier())
     }
 
     private var currentActionDescription: String {
@@ -411,10 +437,7 @@ struct ShortcutRow: View {
 
     private var activeBackground: some View {
         RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .fill(isActive ? Color.accentColor.opacity(0.18) : Color.clear)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(isActive ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1)
-            )
+            .fill(isActive ? Color.yellow.opacity(0.18) : Color.clear)
     }
 }
+

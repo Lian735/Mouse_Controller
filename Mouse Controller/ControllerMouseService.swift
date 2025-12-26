@@ -18,7 +18,6 @@ final class ControllerMouseService: ObservableObject {
     private init() {}
 
     @Published private(set) var controllerName: String = "none"
-    @Published private(set) var batteryDescription: String = "Battery: —"
     @Published private(set) var activeButtons: Set<ControllerButton> = []
 
     private var controller: GCController?
@@ -75,15 +74,6 @@ final class ControllerMouseService: ObservableObject {
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
-
-        gameModeTimer?.invalidate()
-        let gameTimer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateGameModeState()
-            }
-        }
-        RunLoop.main.add(gameTimer, forMode: .common)
-        gameModeTimer = gameTimer
     }
 
     func setEnabled(_ enabled: Bool) {
@@ -95,19 +85,6 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 
-    func updateAutoDisablePreference() {
-        if !AppSettings.shared.autoDisableInGameMode {
-            if gameModePriorEnabled == true {
-                AppSettings.shared.enabled = true
-                setEnabled(true)
-            }
-            gameModePriorEnabled = nil
-            gameModeActive = false
-            return
-        }
-        updateGameModeState()
-    }
-
     func vibrateDoublePulse() {
         guard let controller else { return }
         guard let haptics = controller.haptics else { return }
@@ -116,8 +93,8 @@ final class ControllerMouseService: ObservableObject {
                 hapticsEngine = try haptics.createEngine(withLocality: .default)
                 try hapticsEngine?.start()
             }
-            let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.8)
-            let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.8)
+            let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 5)
+            let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 3)
             let first = CHHapticEvent(eventType: .hapticTransient, parameters: [intensity, sharpness], relativeTime: 0)
             let second = CHHapticEvent(eventType: .hapticTransient, parameters: [intensity, sharpness], relativeTime: 0.18)
             let pattern = try CHHapticPattern(events: [first, second], parameters: [])
@@ -131,17 +108,6 @@ final class ControllerMouseService: ObservableObject {
     private func attach(_ c: GCController) {
         controller = c
         controllerName = c.vendorName ?? "controller"
-        updateBatteryState(c.battery)
-        c.battery?.batteryLevelDidChangeHandler = { [weak self] battery, _ in
-            Task { @MainActor in
-                self?.updateBatteryState(battery)
-            }
-        }
-        c.battery?.batteryStateDidChangeHandler = { [weak self] battery, _ in
-            Task { @MainActor in
-                self?.updateBatteryState(battery)
-            }
-        }
 
         if let gp = c.extendedGamepad {
             wireExtendedGamepad(gp)
@@ -155,7 +121,6 @@ final class ControllerMouseService: ObservableObject {
     private func detach() {
         controller = nil
         controllerName = "none"
-        batteryDescription = "Battery: —"
         lx = 0; ly = 0; rx = 0; ry = 0
         lastLeftDirection = nil
         lastRightDirection = nil
@@ -403,27 +368,6 @@ final class ControllerMouseService: ObservableObject {
         }
     }
 
-    private func updateBatteryState(_ battery: GCDeviceBattery?) {
-        guard let battery else {
-            batteryDescription = "Battery: —"
-            return
-        }
-        let level = Int((battery.batteryLevel * 100).rounded())
-        let stateText: String
-        switch battery.batteryState {
-        case .charging:
-            stateText = "Charging"
-        case .full:
-            stateText = "Full"
-        case .discharging:
-            stateText = "Discharging"
-        case .unknown:
-            fallthrough
-        @unknown default:
-            stateText = "Unknown"
-        }
-        batteryDescription = "Battery: \(level)% · \(stateText)"
-    }
 
     private func updateActiveButton(_ button: ControllerButton, pressed: Bool) {
         if pressed {
@@ -431,38 +375,5 @@ final class ControllerMouseService: ObservableObject {
         } else {
             activeButtons.remove(button)
         }
-    }
-
-    private func updateGameModeState() {
-        guard AppSettings.shared.autoDisableInGameMode else { return }
-        let detected = GameModeDetector.isGameModeActive()
-        guard detected != gameModeActive else { return }
-        gameModeActive = detected
-
-        let settings = AppSettings.shared
-        if detected {
-            if settings.enabled {
-                gameModePriorEnabled = true
-                settings.enabled = false
-                setEnabled(false)
-            } else {
-                gameModePriorEnabled = false
-            }
-        } else if gameModePriorEnabled == true {
-            settings.enabled = true
-            setEnabled(true)
-            gameModePriorEnabled = nil
-        } else {
-            gameModePriorEnabled = nil
-        }
-    }
-}
-
-private enum GameModeDetector {
-    static func isGameModeActive() -> Bool {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return false }
-        let selector = Selector(("isGame"))
-        guard app.responds(to: selector) else { return false }
-        return (app.value(forKey: "isGame") as? Bool) ?? false
     }
 }
