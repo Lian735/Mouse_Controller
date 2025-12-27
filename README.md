@@ -33,7 +33,7 @@ The author’s installation walkthrough is available here:
 
 -> It should work now!
 
-If it doesn't work or you have Questions, join my [Discord Server]( https://discord.gg/u63YhXD3pC).
+If it doesn't work or you have questions, join my [Discord Server]( https://discord.gg/u63YhXD3pC).
 
 ## First‑Run Setup
 
