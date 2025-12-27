@@ -30,9 +30,10 @@ The author’s installation walkthrough is available here:
 4. Open "Mouse Controller" from the Applications folder
 5. A warning will show up
 6. Go to System Settings -> Privacy & Security -> Scroll down until you see ""Mouse Controller" was blocked to protect your Mac." -> Click on "Open Anyway"
-   It should work now!
 
-   If it doesn't work or you have questions, join my [Discord Server]( https://discord.gg/u63YhXD3pC).
+-> It should work now!
+
+If it doesn't work or you have questions, join my [Discord Server]( https://discord.gg/u63YhXD3pC).
 
 ## First‑Run Setup
 
