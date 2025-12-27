@@ -2,7 +2,7 @@
 
 Mouse Controller is a macOS menu-bar companion that lets you drive the pointer, scrolling, and shortcuts with a game controller. It listens to standard GameController inputs and maps sticks and buttons to mouse actions and keyboard/system shortcuts so you can navigate the desktop from the couch.
 
-> ⚠️ Note from the app UI: Mouse Controller is not yet optimized for playing games. It is designed for desktop navigation and quick actions.
+> ⚠️ Note: Mouse Controller is not yet optimized for playing games. It is designed for desktop navigation and quick actions.
 
 ## Highlights
 
