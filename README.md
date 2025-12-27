@@ -24,7 +24,7 @@ The author’s installation walkthrough is available here:
 
 ## How to Install
 
-1. Go to the (releases)[https://github.com/Lian735/Mouse_Controller/releases]
+1. Go to the [releases](https://github.com/Lian735/Mouse_Controller/releases)
 2. Download the latest .dmg file
 3. Drag the App into the Applications folder
 4. Open "Mouse Controller" from the Applications folder
