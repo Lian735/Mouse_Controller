@@ -9,13 +9,10 @@ Mouse Controller is a macOS menu-bar companion that lets you drive the pointer, 
 - **Controller-driven pointer** with adjustable speed, acceleration, and deadzone.
 - **Scroll with the second stick** (vertical + optional horizontal scroll).
 - **Custom shortcuts**: map controller buttons (including D‑pad and stick directions) to mouse clicks or keyboard/system shortcuts.
-- **Stick swapping**: choose which stick controls the pointer vs. scrolling.
-- **Haptic feedback** when adding shortcuts (supported controllers only).
-- **Launch at login** option.
 
 ## Requirements
 
-- macOS with the GameController framework available (macOS 11+ recommended).
+- macOS 26(Tahoe)+
 - A compatible controller (extended or micro gamepad supported by macOS).
 - Accessibility permission so the app can control the mouse and send input.
 
@@ -25,22 +22,24 @@ The author’s installation walkthrough is available here:
 
 - 🎥 **Installation tutorial**: https://www.youtube.com/watch?v=veaml3lK3_8
 
-If you are building from source, use the steps in the next section.
+## How to Install
 
-## Build & Run (from source)
+1. Go to the (releases)[https://github.com/Lian735/Mouse_Controller/releases]
+2. Download the latest .dmg file
+3. Drag the App into the Applications folder
+4. Open "Mouse Controller" from the Applications folder
+5. A warning will show up
+6. Go to System Settings -> Privacy & Security -> Scroll down until you see ""Mouse Controller" was blocked to protect your Mac." -> Click on "Open Anyway"
+   It should work now!
 
-1. Open `Mouse Controller.xcodeproj` in Xcode.
-2. Select the **Mouse Controller** target.
-3. Build and run the app on macOS.
-4. When macOS prompts for Accessibility permission, allow it:
-   - **System Settings → Privacy & Security → Accessibility** → enable **Mouse Controller**.
+   If it doesn't work or you have questions, join this Discord Server: https://discord.gg/u63YhXD3pC 
 
 ## First‑Run Setup
 
-1. **Connect a controller** (Bluetooth or USB). The app will display the controller name in the General tab.
-2. **Enable Mouse Controller** using the toggle at the top of the General tab.
+1. **Connect a controller** (Bluetooth or USB). The app will display the controller name in the Menu.
+2. **Enable Mouse Controller** using the toggle at the top of the General tab, it should be enabled automatically.
 3. Adjust pointer and scroll settings:
-   - Cursor speed, acceleration, and deadzone
+   - Cursor speed, acceleration, and deadzone (put deadzone to 0 if you want the best experience)
    - Scroll speed, vertical/horizontal scroll, and inversion
 4. (Optional) **Swap sticks** if you want the right stick to control the pointer.
 
@@ -63,17 +62,4 @@ Default mappings are provided for:
 
 - If nothing happens when moving sticks, confirm **Accessibility** permission is enabled.
 - If scrolling feels too fast or too slow, tune **Scroll speed** and **Deadzone**.
-- Custom shortcuts temporarily disable pointer/scroll on the mapped stick while they’re active to prevent conflicts.
-
-## Project Structure
-
-Key areas to explore if you’re extending the app:
-
-- `Mouse Controller/ControllerMouseService.swift` — controller input polling, pointer movement, scrolling, and haptics.
-- `Mouse Controller/SettingsView.swift` — UI for settings and shortcut management.
-- `Mouse Controller/Shortcuts.swift` — shortcut models, serialization, and key mapping.
-- `Mouse Controller/AppSettings.swift` — persisted preferences.
-
-## License
-
-No license file is currently included in this repository. Add a LICENSE file if you plan to redistribute.
+- Custom shortcuts temporarily disable pointer/scroll on the mapped stick while they’re active to prevent conflicts. If you remove them tho, pointing/scrolling works again.
