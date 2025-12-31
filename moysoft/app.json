@@ -1,10 +1,11 @@
 {
   "previews": [
     "previews/screen1.png",
-    "previews/screen2.png",
+    "previews/screen2.png",    
+    "previews/screen3.png"
   ],
   "highlights": [
-    "New gesture profiles for DualSense controllers.",
-    "Low-latency input pipeline optimized for macOS."
+    "Add custom Controller Shortcuts.",
+    "Full Controller Rumble Support (soon)."
   ]
 }
