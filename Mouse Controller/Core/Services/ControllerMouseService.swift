@@ -90,7 +90,7 @@ final class ControllerMouseService: ObservableObject {
         guard let haptics = controller.haptics else { return }
         do {
             if hapticsEngine == nil {
-                hapticsEngine = try haptics.createEngine(withLocality: .default)
+                hapticsEngine = haptics.createEngine(withLocality: .default)
                 try hapticsEngine?.start()
             }
             let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 5)
